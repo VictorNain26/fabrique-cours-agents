@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -12,7 +11,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Reglages(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    fournisseur: Literal["fake", "ovhcloud", "anthropic"] = "fake"
+    # Chaine de repli, du moins cher au plus cher. "fake" seul en defaut :
+    # ni les tests ni la CI ne doivent depenser d'argent.
+    fournisseurs: str = "fake"
     budget_par_page: float = Field(default=0.50, gt=0)
     max_essais_reparation: int = Field(default=2, ge=1, le=5)
     max_tours_correction: int = Field(default=3, ge=1, le=10)
@@ -30,6 +31,10 @@ class Reglages(BaseSettings):
     langfuse_public_key: str = ""
     langfuse_secret_key: str = ""
     langfuse_host: str = "https://cloud.langfuse.com"
+
+    @property
+    def chaine(self) -> list[str]:
+        return [n.strip() for n in self.fournisseurs.split(",") if n.strip()]
 
 
 @lru_cache

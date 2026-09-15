@@ -105,7 +105,7 @@ def verif2(m):
     publiees = []
     f = FauxFournisseur([page_json(nb_titres=2), page_json(nb_titres=1)])
     g = construire(
-        f, set(), checkpointer=InMemorySaver(), publier=lambda p: publiees.append(p) or "pub"
+        [f], set(), checkpointer=InMemorySaver(), publier=lambda p: publiees.append(p) or "pub"
     )
     res.append((hasattr(g, "invoke"), "construire renvoie un graphe compile"))
 
@@ -139,7 +139,7 @@ def verif2(m):
     f2 = FauxFournisseur([page_json(nb_titres=1)])
     pub2 = []
     g2 = construire(
-        f2, set(), checkpointer=InMemorySaver(), publier=lambda p: pub2.append(p) or "pub"
+        [f2], set(), checkpointer=InMemorySaver(), publier=lambda p: pub2.append(p) or "pub"
     )
     cfg2 = {"configurable": {"thread_id": "k2-b"}}
     g2.invoke({"brief": "x", "essais": 0}, config=cfg2)
@@ -147,7 +147,7 @@ def verif2(m):
     res.append((pub2 == [], "un refus ne publie pas"))
 
     f3 = FauxFournisseur([page_json(nb_titres=2)])
-    g3 = construire(f3, set(), checkpointer=InMemorySaver(), max_tours=2)
+    g3 = construire([f3], set(), checkpointer=InMemorySaver(), max_tours=2)
     cfg3 = {"configurable": {"thread_id": "k2-c"}}
     e3 = g3.invoke({"brief": "x", "essais": 0}, config=cfg3)
     res.append(

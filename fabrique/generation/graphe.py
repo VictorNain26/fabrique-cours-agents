@@ -1,6 +1,9 @@
 """Graphe LangGraph de la fabrique : redaction, controle, correction, validation
 humaine, publication.
 
+La redaction passe par la chaine de repli : le premier fournisseur qui repond
+gagne, et son nom remonte dans l'etat. Le budget est verifie avant chaque essai.
+
 Un interrupt() est rejoue depuis le debut du noeud a chaque reprise : c'est
 pourquoi l'effet de bord (publication) vit dans un noeud separe, execute
 seulement apres l'approbation, jamais dans le noeud d'interruption.
@@ -18,7 +21,8 @@ from langgraph.types import Overwrite, RetryPolicy, interrupt
 from fabrique.garde_fous.validateur import bloquantes, valider
 from fabrique.generation.reparation import generer_valide
 from fabrique.modeles import EtatPage, Page, Violation
-from fabrique.providers.base import Fournisseur, SortieInvalide, Surcharge
+from fabrique.providers.base import Fournisseur, Surcharge
+from fabrique.providers.repli import executer
 
 SYSTEME = "Tu generes une page web au format JSON strict conforme au schema fourni."
 
@@ -35,11 +39,12 @@ def _dernier_retour(journal: list[str]) -> str | None:
 
 
 def construire(
-    fournisseur: Fournisseur,
+    fournisseurs: list[Fournisseur],
     pages_existantes: set[str],
     *,
     checkpointer=None,
     max_tours: int = 3,
+    budget_par_page: float = 0.50,
     publier: Callable[[Page], str] = _publier_neutre,
 ) -> CompiledStateGraph:
     def bornes(etat: EtatPage) -> bool:
@@ -50,12 +55,20 @@ def construire(
         retour = _dernier_retour(etat.get("journal", []))
         invite = etat["brief"] if retour is None else f"{etat['brief']}\n\n{retour}"
 
-        page = generer_valide(fournisseur, invite=invite, schema=Page, systeme=SYSTEME)
+        resultat = executer(
+            fournisseurs,
+            budget_par_page,
+            lambda f: generer_valide(f, invite=invite, schema=Page, systeme=SYSTEME),
+        )
 
         return {
             "essais": essais,
-            "page": page.model_dump(),
-            "journal": [f"redaction: essai {essais}"],
+            "page": resultat.valeur.model_dump(),
+            "fournisseur": resultat.fournisseur,
+            "cout": resultat.cout,
+            "journal": [
+                f"redaction: essai {essais}, {resultat.fournisseur}, {resultat.cout:.4f} EUR"
+            ],
         }
 
     def noeud_controle(etat: EtatPage) -> dict:
@@ -105,7 +118,10 @@ def construire(
     graphe.add_node(
         "redaction",
         noeud_redaction,
-        retry_policy=RetryPolicy(max_attempts=3, retry_on=(Surcharge, SortieInvalide)),
+        # executer() possede deja la politique par categorie : bascule sur
+        # Surcharge, un re-essai sur SortieInvalide, propagation sur Fatale. Ce
+        # retry-ci ne couvre que le cas ou TOUTE la chaine etait saturee.
+        retry_policy=RetryPolicy(max_attempts=2, retry_on=(Surcharge,)),
     )
     graphe.add_node("controle", noeud_controle)
     graphe.add_node("correction", noeud_correction)

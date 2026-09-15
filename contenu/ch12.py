@@ -120,7 +120,7 @@ CH12 = Chapitre(
 MARGE = 0.05
 
 def tache(*, item, **_):
-    graphe = construire(FournisseurFake(), pages_existantes, checkpointer=InMemorySaver())
+    graphe = construire([FournisseurFake()], pages_existantes, checkpointer=InMemorySaver())
     etat = graphe.invoke({"brief": item["input"], "essais": 0}, config=...)
     return etat.get("page")
 
@@ -220,7 +220,7 @@ porte     python -m fabrique.evaluation.ci"""),
         "exiger_non_regression si la qualite recule.",
         squelette=SQ12,
         verifier=verif12,
-        indice="tache construit le graphe avec construire(FournisseurFake(), "
+        indice="tache construit le graphe avec construire([FournisseurFake()], "
         'set(item["metadata"]["pages_existantes"]), checkpointer=InMemorySaver()), '
         'l\'invoque avec {"brief": item["input"], "essais": 0} et un thread_id egal '
         'a item["metadata"]["identifiant"], puis renvoie etat.get("page"). main '

@@ -69,7 +69,7 @@ def verif9(m):
     def monter():
         publiees = []
         graphe = construire(
-            FournisseurFake(),
+            [FournisseurFake()],
             pages_existantes,
             checkpointer=InMemorySaver(),
             publier=lambda page: publiees.append(page) or "pub-1",

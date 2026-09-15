@@ -143,7 +143,7 @@ def _graphe(
     }
     if publier is not None:
         arguments["publier"] = publier
-    return construire(request.app.state.fournisseur, pages_existantes, **arguments)
+    return construire(request.app.state.fournisseurs, pages_existantes, **arguments)
 
 
 def _statut_depuis_etat(etat) -> str:

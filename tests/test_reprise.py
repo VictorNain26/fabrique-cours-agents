@@ -10,7 +10,7 @@ PAGES = {"/vps"}
 def monter():
     publiees = []
     graphe = construire(
-        FournisseurFake(),
+        [FournisseurFake()],
         PAGES,
         checkpointer=InMemorySaver(),
         publier=lambda page: publiees.append(page) or "pub-1",

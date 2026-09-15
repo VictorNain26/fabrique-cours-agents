@@ -43,3 +43,7 @@ class EtatPage(TypedDict, total=False):
     approuve: bool | None
     commentaire_humain: str
     publiee: bool
+    # Tracer le fournisseur qui a reellement repondu : un repli silencieux
+    # fausse toute comparaison ulterieure entre deux versions.
+    fournisseur: str
+    cout: float

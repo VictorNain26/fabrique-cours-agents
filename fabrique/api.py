@@ -34,7 +34,7 @@ from fabrique.providers.ovhcloud import FournisseurOVHcloud
 
 class SanteReponse(BaseModel):
     statut: Literal["ok"]
-    fournisseur: str
+    fournisseurs: list[str]
 
 
 class CreerPageRequete(BaseModel):
@@ -67,19 +67,23 @@ class ValidationReponse(BaseModel):
     identifiant_publication: str | None
 
 
-def _fournisseur_depuis_reglages(parametres: Reglages) -> Fournisseur:
-    if parametres.fournisseur == "ovhcloud":
+def _un_fournisseur(nom: str, parametres: Reglages) -> Fournisseur:
+    if nom == "ovhcloud":
         return FournisseurOVHcloud(
             api_key=parametres.ovh_api_key,
             base_url=parametres.ovh_base_url,
             modele=parametres.ovh_modele,
         )
-    if parametres.fournisseur == "anthropic":
+    if nom == "anthropic":
         return FournisseurAnthropic(
             api_key=parametres.anthropic_api_key,
             modele=parametres.anthropic_modele,
         )
     return FournisseurFake()
+
+
+def _chaine_depuis_reglages(parametres: Reglages) -> list[Fournisseur]:
+    return [_un_fournisseur(nom, parametres) for nom in parametres.chaine]
 
 
 @asynccontextmanager
@@ -95,7 +99,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             checkpointer = InMemorySaver()
 
         app.state.checkpointer = checkpointer
-        app.state.fournisseur = _fournisseur_depuis_reglages(parametres)
+        app.state.fournisseurs = _chaine_depuis_reglages(parametres)
         yield
 
 
@@ -136,10 +140,11 @@ def _graphe(
     arguments = {
         "checkpointer": request.app.state.checkpointer,
         "max_tours": parametres.max_tours_correction,
+        "budget_par_page": parametres.budget_par_page,
     }
     if publier is not None:
         arguments["publier"] = publier
-    return construire(request.app.state.fournisseur, pages_existantes, **arguments)
+    return construire(request.app.state.fournisseurs, pages_existantes, **arguments)
 
 
 def _statut_depuis_etat(etat) -> str:
@@ -154,7 +159,7 @@ def _statut_depuis_etat(etat) -> str:
 
 @app.get("/sante")
 async def sante() -> SanteReponse:
-    return SanteReponse(statut="ok", fournisseur=reglages().fournisseur)
+    return SanteReponse(statut="ok", fournisseurs=reglages().chaine)
 
 
 @app.post("/pages", status_code=202)

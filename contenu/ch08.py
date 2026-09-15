@@ -202,6 +202,23 @@ Fatale (cle, refus)   aucun re-essai, alerte immediate"""),
             "gardes en propre, c'est le choix du fournisseur de repli et la borne de "
             "reparation, qui sont des decisions metier."
         ),
+        H("Ou vit ce code dans la fabrique"),
+        T(
+            "Ce n'est pas un exercice isole : le noeud de redaction du graphe appelle "
+            "executer(). La chaine de fournisseurs vient de la configuration, ordonnee du "
+            "moins cher au plus cher. Par defaut elle ne contient que le fournisseur "
+            "factice, pour que ni les tests ni la CI ne depensent d'argent."
+        ),
+        C(
+            """FOURNISSEURS=ovhcloud,anthropic   # OVHcloud d'abord, Anthropic en secours
+BUDGET_PAR_PAGE=0.50              # depasse -> l'API renvoie 402"""
+        ),
+        T(
+            "Le graphe garde malgre tout un retry_policy, reduit a la seule Surcharge et a "
+            "deux tentatives. Les deux niveaux ne font pas doublon : executer() gere la "
+            "politique PAR FOURNISSEUR, le retry du graphe couvre le cas ou la chaine "
+            "ENTIERE etait saturee au meme instant."
+        ),
         H("Le repli change tes mesures"),
         A(
             "Un repli silencieux vers un autre modele modifie la qualite sans que personne ne "

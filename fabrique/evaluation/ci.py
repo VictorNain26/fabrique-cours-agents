@@ -23,7 +23,7 @@ MARGE = 0.05
 
 def tache(*, item, **_):
     graphe = construire(
-        FournisseurFake(),
+        [FournisseurFake()],
         set(item["metadata"].get("pages_existantes", [])),
         checkpointer=InMemorySaver(),
     )

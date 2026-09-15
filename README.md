@@ -32,9 +32,23 @@ catalogue. Le chapitre 5 et le chapitre 6 cessent d'être deux exercices sépar�
 
 ```
 brief -> redaction -> controle -> [correction -> redaction]* -> validation humaine -> publication
-                          |                                            |
-                    garde-fous                                   interrupt()
+            |             |                                            |
+    chaine de repli   garde-fous                                  interrupt()
 ```
+
+La rédaction passe par une **chaîne de fournisseurs** ordonnée du moins cher au
+plus cher : le premier qui répond gagne, on ne bascule que sur surcharge, et le
+nom de celui qui a réellement répondu est écrit dans l'état avec son coût. Le
+budget par page est vérifié avant chaque essai — dépassé, l'API renvoie 402.
+
+```
+FOURNISSEURS=ovhcloud,anthropic   # defaut : fake seul, aucun appel reseau
+BUDGET_PAR_PAGE=0.50
+```
+
+Les modèles par défaut sont les moins chers de chaque fournisseur — Llama 3.3 70B
+chez OVHcloud (0,67 €/M tokens), Haiku 4.5 chez Anthropic. C'est un cours et une
+démonstration : mille pages coûtent environ un euro.
 
 ```bash
 docker compose up --build          # api sur http://localhost:8000

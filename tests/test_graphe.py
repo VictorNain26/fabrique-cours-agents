@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 
+import pytest
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.types import Command
 
@@ -37,7 +38,7 @@ def _config(thread_id: str) -> dict:
 
 def test_correction_tourne_puis_sarrete_sans_violation_bloquante():
     fournisseur = FournisseurFake(reponses=[PAGE_INVALIDE, PAGE_VALIDE])
-    graphe = construire(fournisseur, set(), checkpointer=InMemorySaver(), max_tours=3)
+    graphe = construire([fournisseur], set(), checkpointer=InMemorySaver(), max_tours=3)
 
     resultat = graphe.invoke({"brief": "brief"}, config=_config("t1"))
 
@@ -48,7 +49,7 @@ def test_correction_tourne_puis_sarrete_sans_violation_bloquante():
 
 def test_max_tours_borne_le_nombre_dessais():
     fournisseur = FournisseurFake(reponses=[PAGE_INVALIDE])
-    graphe = construire(fournisseur, set(), checkpointer=InMemorySaver(), max_tours=2)
+    graphe = construire([fournisseur], set(), checkpointer=InMemorySaver(), max_tours=2)
 
     resultat = graphe.invoke({"brief": "brief"}, config=_config("t2"))
 
@@ -58,7 +59,7 @@ def test_max_tours_borne_le_nombre_dessais():
 
 def test_le_graphe_sinterrompt_a_la_validation_humaine():
     fournisseur = FournisseurFake(reponses=[PAGE_VALIDE])
-    graphe = construire(fournisseur, set(), checkpointer=InMemorySaver(), max_tours=3)
+    graphe = construire([fournisseur], set(), checkpointer=InMemorySaver(), max_tours=3)
     config = _config("t3")
 
     resultat = graphe.invoke({"brief": "brief"}, config=config)
@@ -80,7 +81,7 @@ def test_reprise_approuvee_publie_une_seule_fois():
 
     fournisseur = FournisseurFake(reponses=[PAGE_VALIDE])
     graphe = construire(
-        fournisseur, set(), checkpointer=InMemorySaver(), max_tours=3, publier=publier
+        [fournisseur], set(), checkpointer=InMemorySaver(), max_tours=3, publier=publier
     )
     config = _config("t4")
 
@@ -100,7 +101,7 @@ def test_reprise_refusee_ne_publie_pas():
 
     fournisseur = FournisseurFake(reponses=[PAGE_VALIDE])
     graphe = construire(
-        fournisseur, set(), checkpointer=InMemorySaver(), max_tours=3, publier=publier
+        [fournisseur], set(), checkpointer=InMemorySaver(), max_tours=3, publier=publier
     )
     config = _config("t5")
 
@@ -115,7 +116,7 @@ def test_reprise_refusee_ne_publie_pas():
 
 def test_tous_les_noeuds_sont_declares():
     fournisseur = FournisseurFake(reponses=[PAGE_VALIDE])
-    graphe = construire(fournisseur, set(), checkpointer=InMemorySaver())
+    graphe = construire([fournisseur], set(), checkpointer=InMemorySaver())
 
     noms = set(graphe.get_graph().nodes)
 
@@ -126,3 +127,29 @@ def test_tous_les_noeuds_sont_declares():
         "validation_humaine",
         "publication",
     } <= noms
+
+
+def test_le_graphe_bascule_sur_le_fournisseur_suivant_et_trace_lequel() -> None:
+    from fabrique.providers.base import Surcharge
+
+    sature = FournisseurFake(reponses=[PAGE_VALIDE], erreurs=[Surcharge()])
+    sature.nom = "sature"
+    secours = FournisseurFake(reponses=[PAGE_VALIDE])
+    secours.nom = "secours"
+
+    graphe = construire([sature, secours], set(), checkpointer=InMemorySaver())
+    etat = graphe.invoke({"brief": "brief"}, config=_config("repli-1"))
+
+    assert etat["fournisseur"] == "secours"
+    assert etat["page"] is not None
+
+
+def test_le_budget_arrete_la_chaine_avant_l_appel() -> None:
+    from fabrique.providers.base import BudgetDepasse
+
+    cher = FournisseurFake(reponses=[PAGE_VALIDE])
+    cher.cout_par_appel = 10.0
+
+    graphe = construire([cher], set(), checkpointer=InMemorySaver(), budget_par_page=0.5)
+    with pytest.raises(BudgetDepasse):
+        graphe.invoke({"brief": "brief"}, config=_config("budget-1"))

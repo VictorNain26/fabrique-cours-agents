@@ -10,7 +10,7 @@ from fabrique.config import reglages
 
 @pytest.fixture
 def client(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setenv("FOURNISSEUR", "fake")
+    monkeypatch.setenv("FOURNISSEURS", "fake")
     monkeypatch.setenv("DATABASE_URL", "")
     reglages.cache_clear()
 
@@ -26,7 +26,7 @@ def test_sante(client: TestClient) -> None:
     reponse = client.get("/sante")
 
     assert reponse.status_code == 200
-    assert reponse.json() == {"statut": "ok", "fournisseur": "fake"}
+    assert reponse.json() == {"statut": "ok", "fournisseurs": ["fake"]}
 
 
 def test_creer_page_renvoie_un_thread_id_et_un_statut_coherent(client: TestClient) -> None:
