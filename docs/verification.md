@@ -34,7 +34,7 @@ openai 3.14.0 · fastapi 0.141.1 · psycopg 3.3.5
 | `PostgresSaver.setup()` cree bien `checkpoints`, `checkpoint_blobs`, `checkpoint_writes`, `checkpoint_migrations` | `\dt` dans le conteneur Postgres du compose |
 | **Une generation en attente de validation survit au redemarrage du conteneur api** et reste validable ensuite | thread cree, `docker compose restart api`, puis validation reussie |
 | Rejouer une validation deja consommee renvoie 409, un brief vide renvoie 422 | appels curl contre le conteneur |
-| **L'adaptateur Anthropic fonctionne contre l'API reelle** : appel abouti, reponse parsee, erreurs traduites vers la taxonomie | `scripts_valider_fournisseur.py anthropic` avec une vraie cle |
+| **L'adaptateur Anthropic fonctionne contre l'API reelle**, teste sur `claude-sonnet-5` (avant la bascule du defaut vers Haiku 4.5, qui n'a pas ete appele) : appel abouti, reponse parsee, erreurs traduites vers la taxonomie | `scripts_valider_fournisseur.py anthropic` avec une vraie cle |
 | **La boucle de reparation repare vraiment** : le modele reel a d'abord produit une `meta_description` de plus de 158 caracteres, l'erreur lui a ete renvoyee, le second jet etait conforme | execution avec `generer_valide(max_essais=3)` |
 | **L'adaptateur OVHcloud fonctionne contre l'API reelle** : `Meta-Llama-3_3-70B-Instruct` a repondu, 65 tokens entree / 546 sortie, Page valide au premier essai grace a `response_format` | `scripts_valider_fournisseur.py ovhcloud` avec une vraie cle |
 | **Le graphe complet tourne contre un vrai modele** : premier jet sans bloc titre (H1_MULTIPLE bloquant), correction reinjectee, second jet conforme, interruption, puis publication unique apres approbation | execution du graphe avec `FournisseurAnthropic` |

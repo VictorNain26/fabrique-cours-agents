@@ -105,15 +105,50 @@ La CI enchaîne les quatre. La porte de non-régression rejoue le golden dataset
 compare à `fabrique/evaluation/reference.json` versionné dans le dépôt, et échoue
 si la qualité recule au-delà de la marge.
 
+## Les deux fournisseurs ont été testés contre leur API réelle
+
+Pas seulement écrits contre la doc : exécutés, le 15/09/2026.
+
+**Anthropic (Sonnet 5).** La chaîne complète a tourné contre le vrai modèle, et
+deux échecs réels se sont produits — ce qui vaut mieux qu'un succès du premier
+coup. Le modèle a d'abord rendu une `meta_description` au-delà de 158 caractères ;
+l'erreur lui a été renvoyée en nommant le champ, le second jet faisait 141. Puis,
+sur le graphe complet, il a produit une page sans aucun bloc `titre` : violation
+`H1_MULTIPLE` bloquante, correction réinjectée, second jet conforme, interruption
+pour validation, publication **une seule fois** après approbation.
+
+**OVHcloud AI Endpoints (Llama 3.3 70B).** Page valide au premier essai grâce à
+`response_format`, avec une `meta_description` à 158 caractères — exactement la
+borne du schéma. 65 tokens en entrée, 546 en sortie.
+
+Ces appels datent d'avant la bascule du modèle par défaut : **Haiku 4.5, qui est
+désormais le défaut, n'a jamais été appelé pour de vrai.** Le tarif ci-dessous est
+donc une projection pour Haiku, une mesure pour OVHcloud.
+
+Le détail et les niveaux de preuve sont dans [`docs/verification.md`](docs/verification.md).
+
+## Ce que ça coûte
+
+Tarifs relevés à la source : le catalogue OVHcloud annonce **0,67 € par million de
+tokens**, entrée et sortie ; Haiku 4.5 est à 1 $/M en entrée et 5 $/M en sortie.
+
+| | une page | 1 000 pages |
+|---|---|---|
+| OVHcloud Llama 70B | 0,0004 € | **1,09 €** |
+| Anthropic Haiku 4.5 | 0,0055 € | 5,51 € |
+
+**Les tests et la CI ne coûtent rien** : ils tournent sur le fournisseur factice,
+zéro appel réseau. C'est délibéré — une porte de non-régression qui coûterait de
+l'argent à chaque push finirait désactivée.
+
 ## Ce qui n'est pas couvert
 
-Les adaptateurs OVHcloud AI Endpoints et Anthropic sont écrits contre leur
-documentation mais **n'ont jamais été exécutés contre l'API réelle**, faute de clé.
-Seul le fournisseur factice est couvert par les tests. Valide-les avec tes propres
-clés avant de les présenter comme éprouvés.
+Les tests automatisés ne couvrent les adaptateurs réels que sur la traduction de
+leurs erreurs ; les appels ci-dessus ont été faits à la main, pas en CI.
 
 Le workflow GitHub Actions n'a jamais tourné sur un runner ; les versions
 d'actions viennent de leurs pages de releases.
 
-Temporal, Langfuse en mode connecté et le déploiement sur une infrastructure réelle
-restent à faire.
+Temporal reste théorique — il n'est pas dans l'application. Langfuse est
+instrumenté mais n'a jamais été connecté à un serveur. Le déploiement sur une
+infrastructure réelle reste à faire.
