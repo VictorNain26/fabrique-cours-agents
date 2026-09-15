@@ -1,0 +1,32 @@
+services:
+  base:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-fabrique}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?definis POSTGRES_PASSWORD dans ton .env}
+      POSTGRES_DB: ${POSTGRES_DB:-fabrique}
+    volumes:
+      - donnees:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-fabrique}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    depends_on:
+      base:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-fabrique}:${POSTGRES_PASSWORD}@base:5432/${POSTGRES_DB:-fabrique}
+      FOURNISSEUR: ${FOURNISSEUR:-fake}
+      OVH_API_KEY: ${OVH_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-}
+    ports:
+      - "8000:8000"
+
+volumes:
+  donnees:
