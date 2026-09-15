@@ -22,7 +22,9 @@ class Reglages(BaseSettings):
     ovh_modele: str = "Meta-Llama-3_3-70B-Instruct"
 
     anthropic_api_key: str = ""
-    anthropic_modele: str = "claude-sonnet-5"
+    # Haiku par defaut : ce projet fait tourner des evaluations en boucle, et le
+    # cout par page est une metrique du tableau de bord, pas un detail.
+    anthropic_modele: str = "claude-haiku-4-5-20251001"
 
     database_url: str = ""
     langfuse_public_key: str = ""

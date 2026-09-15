@@ -8,9 +8,9 @@ Sort 0 si l'adaptateur produit une Page conforme au schema, 1 sinon.
 
 from __future__ import annotations
 
-import os
 import sys
 
+from fabrique.config import reglages
 from fabrique.modeles import Page
 from fabrique.providers.base import ErreurFournisseur
 
@@ -30,18 +30,18 @@ def main() -> int:
     if nom == "ovhcloud":
         from fabrique.providers.ovhcloud import FournisseurOVHcloud
 
-        cle = os.environ.get("OVH_API_KEY", "")
+        cle = reglages().ovh_api_key
         if not cle:
-            print("OVH_API_KEY absente de l'environnement.")
+            print("ovh_api_key absente : renseigne OVH_API_KEY dans .env")
             return 1
         print(f"cle OVH_API_KEY : {_masque(cle)}")
         fournisseur = FournisseurOVHcloud(api_key=cle)
     elif nom == "anthropic":
         from fabrique.providers.anthropic import FournisseurAnthropic
 
-        cle = os.environ.get("ANTHROPIC_API_KEY", "")
+        cle = reglages().anthropic_api_key
         if not cle:
-            print("ANTHROPIC_API_KEY absente de l'environnement.")
+            print("anthropic_api_key absente : renseigne ANTHROPIC_API_KEY dans .env")
             return 1
         print(f"cle ANTHROPIC_API_KEY : {_masque(cle)}")
         fournisseur = FournisseurAnthropic(api_key=cle)
