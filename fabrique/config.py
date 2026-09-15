@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from urllib.parse import quote
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -27,10 +28,27 @@ class Reglages(BaseSettings):
     # cout par page est une metrique du tableau de bord, pas un detail.
     anthropic_modele: str = "claude-haiku-4-5-20251001"
 
-    database_url: str = ""
+    # Les composants plutot qu'un DSN assemble : aucune URL porteuse d'identifiants
+    # ne figure dans le depot, et le secret reste une variable isolee.
+    postgres_host: str = ""
+    postgres_port: int = 5432
+    postgres_user: str = "fabrique"
+    postgres_password: str = ""
+    postgres_db: str = "fabrique"
     langfuse_public_key: str = ""
     langfuse_secret_key: str = ""
     langfuse_host: str = "https://cloud.langfuse.com"
+
+    @property
+    def dsn(self) -> str:
+        """Chaine de connexion Postgres, ou "" si aucune base n'est configuree."""
+        if not self.postgres_host:
+            return ""
+        mot_de_passe = quote(self.postgres_password, safe="")
+        return (
+            f"postgresql://{quote(self.postgres_user, safe='')}:{mot_de_passe}"
+            f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        )
 
     @property
     def chaine(self) -> list[str]:

@@ -11,7 +11,7 @@ from fabrique.config import reglages
 @pytest.fixture
 def client(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("FOURNISSEURS", "fake")
-    monkeypatch.setenv("DATABASE_URL", "")
+    monkeypatch.setenv("POSTGRES_HOST", "")
     reglages.cache_clear()
 
     from fabrique.api import app

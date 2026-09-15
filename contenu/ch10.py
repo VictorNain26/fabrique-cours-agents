@@ -201,7 +201,7 @@ def verif10(m):
     import os
 
     os.environ["FOURNISSEUR"] = "fake"
-    os.environ["DATABASE_URL"] = ""
+    os.environ["POSTGRES_HOST"] = ""
     reglages.cache_clear()
 
     with TestClient(app) as client:
@@ -296,7 +296,7 @@ CH10 = Chapitre(
         ),
         C("""from langgraph.checkpoint.postgres import PostgresSaver
 
-checkpointer = PostgresSaver.from_conn_string("postgresql://...")
+checkpointer = PostgresSaver.from_conn_string(reglages().dsn)
 checkpointer.setup()   # cree les tables et les index, une fois"""),
         A(
             "from_conn_string est un gestionnaire de contexte synchrone. Dans un "

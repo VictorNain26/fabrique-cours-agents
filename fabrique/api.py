@@ -90,10 +90,8 @@ def _chaine_depuis_reglages(parametres: Reglages) -> list[Fournisseur]:
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     parametres = reglages()
     with ExitStack() as pile:
-        if parametres.database_url:
-            checkpointer = pile.enter_context(
-                PostgresSaver.from_conn_string(parametres.database_url)
-            )
+        if parametres.dsn:
+            checkpointer = pile.enter_context(PostgresSaver.from_conn_string(parametres.dsn))
             checkpointer.setup()
         else:
             checkpointer = InMemorySaver()
