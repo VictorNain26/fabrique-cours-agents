@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 import types
 
@@ -220,9 +221,21 @@ def test_ovhcloud_transmet_le_retour_dans_les_messages(fournisseur_ovhcloud) -> 
     assert any("erreur precedente" in c for c in contenu_messages)
 
 
-def test_import_anthropic_ne_casse_pas_sans_le_paquet() -> None:
+def test_importer_le_module_ne_charge_pas_le_sdk() -> None:
+    """L'import doit rester paresseux, que le paquet soit installe ou non."""
+    code = "import sys; import fabrique.providers.anthropic; print('anthropic' in sys.modules)"
+    sortie = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=True
+    )
+    assert sortie.stdout.strip() == "False"
+
+
+def test_construire_sans_le_paquet_donne_une_erreur_claire(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     import fabrique.providers.anthropic as module_anthropic
 
+    monkeypatch.setitem(sys.modules, "anthropic", None)
     with pytest.raises(ImportError):
         module_anthropic.FournisseurAnthropic(api_key="cle-de-test")
 

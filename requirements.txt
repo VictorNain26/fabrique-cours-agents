@@ -8,6 +8,7 @@ temporalio==1.33.0
 mcp==2.2.0
 langfuse==4.15.3
 openai==3.14.0
+anthropic==1.6.0
 fastapi==0.141.1
 uvicorn[standard]==0.53.0
 psycopg[binary,pool]==3.3.5
