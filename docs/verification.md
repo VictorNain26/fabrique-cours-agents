@@ -30,6 +30,10 @@ openai 3.14.0 · fastapi 0.141.1 · psycopg 3.3.5
 | Sans clés, le client Langfuse se désactive et ne lève pas | exécution sans variables d'environnement |
 | `PostgresSaver` a bien `.from_conn_string()` et `.setup()` | introspection |
 | En openai 3.14, `chat.completions.parse` existe hors beta | `hasattr` sur le client |
+| L'image se construit et le conteneur passe son healthcheck en tournant non-root | `docker build` puis `docker run`, healthcheck observe `healthy` |
+| `PostgresSaver.setup()` cree bien `checkpoints`, `checkpoint_blobs`, `checkpoint_writes`, `checkpoint_migrations` | `\dt` dans le conteneur Postgres du compose |
+| **Une generation en attente de validation survit au redemarrage du conteneur api** et reste validable ensuite | thread cree, `docker compose restart api`, puis validation reussie |
+| Rejouer une validation deja consommee renvoie 409, un brief vide renvoie 422 | appels curl contre le conteneur |
 
 ## Faits établis par lecture de la documentation officielle
 
@@ -56,11 +60,6 @@ Les adaptateurs OVHcloud et Anthropic sont écrits contre leur documentation mai
 n'ont jamais été exécutés contre l'API réelle, faute de clé. Seul le fournisseur
 factice est couvert par les tests. Valide-les avec tes propres clés avant de les
 présenter comme éprouvés.
-
-`Dockerfile` et `docker-compose.yml` n'ont jamais été construits ni lancés : Docker
-n'était pas installé sur la machine de développement. Leur contenu suit les usages
-courants (utilisateur non-root, healthcheck, dépendance conditionnelle sur un
-service sain) mais rien n'a été vérifié par exécution.
 
 Le workflow GitHub Actions n'a jamais tourné sur un runner. Les versions
 `actions/checkout@v7` et `actions/setup-python@v7` ont été relevées sur leurs pages

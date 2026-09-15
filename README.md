@@ -98,10 +98,8 @@ documentation mais **n'ont jamais été exécutés contre l'API réelle**, faute
 Seul le fournisseur factice est couvert par les tests. Valide-les avec tes propres
 clés avant de les présenter comme éprouvés.
 
-`Dockerfile` et `docker-compose.yml` sont écrits mais **n'ont jamais été
-construits ni lancés** : Docker n'était pas disponible sur la machine de
-développement. Fais un `docker compose build` avant de t'appuyer dessus en
-entretien.
+Le workflow GitHub Actions n'a jamais tourné sur un runner ; les versions
+d'actions viennent de leurs pages de releases.
 
 Temporal, Langfuse en mode connecté et le déploiement sur une infrastructure réelle
 restent à faire.
