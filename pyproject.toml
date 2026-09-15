@@ -1,0 +1,18 @@
+[project]
+name = "fabrique"
+version = "0.1.0"
+description = "Fabrique de pages web sous garde-fous, avec validation humaine"
+requires-python = ">=3.10"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = [".venv", ".solutions", "atelier"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

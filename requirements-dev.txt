@@ -1,0 +1,5 @@
+# Releve par `pip list` dans le venv du projet le 15/09/2026.
+pytest==9.1.1
+pytest-asyncio==1.4.0
+httpx==0.28.1
+ruff==0.16.7
