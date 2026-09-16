@@ -91,7 +91,15 @@ def test_une_page_donne_une_trace_de_la_redaction_a_la_publication(spans, monkey
         Langfuse.create_trace_id(seed="page-1")
     }, "la reprise apres validation doit rester dans la trace de la page"
     noeuds = [s.name for s in exportes if s.attributes.get("langfuse.internal.as_root")]
-    assert noeuds == ["redaction", "controle", "correction", "redaction", "controle", "publication"]
+    assert noeuds == [
+        "redaction",
+        "controle",
+        "correction",
+        "redaction",
+        "controle",
+        "tarification",
+        "publication",
+    ]
     generations = _generations(exportes)
     assert len(generations) == 2
     assert all(g.attributes[MODELE] == "fake" for g in generations)

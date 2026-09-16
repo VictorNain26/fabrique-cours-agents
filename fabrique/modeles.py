@@ -5,9 +5,14 @@ from __future__ import annotations
 from typing import Annotated, Literal, TypedDict
 
 from pydantic import BaseModel, Field
+from pydantic.json_schema import SkipJsonSchema
 
 TypeBloc = Literal["titre", "paragraphe", "cta", "tableau_prix"]
 Gravite = Literal["bloquant", "avertissement"]
+
+
+def _concatener(a: list[str] | None, b: list[str] | None) -> list[str]:
+    return (a or []) + (b or [])
 
 
 class BlocPage(BaseModel):
@@ -16,6 +21,9 @@ class BlocPage(BaseModel):
     # Le validateur interdit les prix en dur : un tableau de prix designe un
     # produit du catalogue, et le prix reel est resolu ensuite via MCP.
     product_ref: str | None = None
+    # Rempli par le noeud de tarification depuis le catalogue, jamais par le
+    # modele : absent du schema envoye au LLM, et ecrase s'il l'invente.
+    prix_affiche: SkipJsonSchema[str | None] = None
 
 
 class Page(BaseModel):
@@ -39,7 +47,8 @@ class EtatPage(TypedDict, total=False):
     page: dict | None
     violations: list[dict]
     essais: int
-    journal: Annotated[list[str], lambda a, b: (a or []) + (b or [])]
+    journal: Annotated[list[str], _concatener]
+    retours: Annotated[list[str], _concatener]
     approuve: bool | None
     commentaire_humain: str
     publiee: bool

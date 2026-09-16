@@ -21,7 +21,12 @@ PAGE_BONNE = {
     "blocs": [
         {"type": "titre", "contenu": "Un titre correct"},
         {"type": "paragraphe", "contenu": "Un paragraphe sans prix ni montant."},
-        {"type": "tableau_prix", "contenu": "Voir nos offres", "product_ref": "ref-42"},
+        {
+            "type": "tableau_prix",
+            "contenu": "Voir nos offres",
+            "product_ref": "vps-comfort",
+            "prix_affiche": "7.99 EUR / mois",
+        },
     ],
     "liens": ["/accueil"],
 }
@@ -123,6 +128,54 @@ class TestRefsProduitResolues:
 
         assert evaluation.value == 0.0
 
+    def test_tableau_prix_sans_prix_affiche_est_notee_zero(self):
+        page = _page_avec(
+            blocs=[
+                {"type": "titre", "contenu": "Un titre correct"},
+                {
+                    "type": "tableau_prix",
+                    "contenu": "Voir nos offres",
+                    "product_ref": "vps-comfort",
+                },
+            ]
+        )
+
+        evaluation = refs_produit_resolues(input="brief", output=page)
+
+        assert evaluation.value == 0.0
+
+    def test_reference_hors_catalogue_est_notee_zero(self):
+        page = _page_avec(
+            blocs=[
+                {"type": "titre", "contenu": "Un titre correct"},
+                {
+                    "type": "tableau_prix",
+                    "contenu": "Voir nos offres",
+                    "product_ref": "ref-42",
+                    "prix_affiche": "7.99 EUR / mois",
+                },
+            ]
+        )
+
+        evaluation = refs_produit_resolues(input="brief", output=page)
+
+        assert evaluation.value == 0.0
+
+    def test_prix_affiche_different_du_catalogue_est_note_zero(self):
+        page = {
+            **PAGE_BONNE,
+            "blocs": [
+                {"type": "titre", "contenu": "Titre"},
+                {
+                    "type": "tableau_prix",
+                    "contenu": "Offres",
+                    "product_ref": "vps-comfort",
+                    "prix_affiche": "1.00 EUR / mois",
+                },
+            ],
+        }
+        assert refs_produit_resolues(input="brief", output=page).value == 0.0
+
 
 def _task_constante(*, item, **kwargs):
     return PAGE_BONNE
@@ -211,3 +264,10 @@ class TestDataset:
         identifiants = [cas.identifiant for cas in CAS]
 
         assert len(identifiants) == len(set(identifiants))
+
+    def test_le_dataset_ne_cite_que_des_references_du_catalogue(self):
+        from fabrique.mcp_catalogue import catalogue
+
+        for cas in CAS:
+            for ref in cas.attendus.get("refs_produit_attendues", []):
+                assert catalogue.get(ref) is not None, ref
