@@ -153,3 +153,31 @@ def test_workflow_ne_contient_aucun_appel_non_deterministe():
 
     fautifs = [a for a in _appels(corps) if a in INTERDITS]
     assert fautifs == []
+
+
+async def test_generer_page_efface_un_prix_invente_par_le_modele(monkeypatch):
+    from fabrique.temporal import activites
+
+    page = json.dumps(
+        {
+            "titre_h1": "Titre",
+            "meta_description": META,
+            "blocs": [
+                {"type": "titre", "contenu": "Titre unique", "prix_affiche": "0.01 EUR"},
+                {
+                    "type": "tableau_prix",
+                    "contenu": "Nos offres",
+                    "product_ref": "vps-comfort",
+                    "prix_affiche": "0.01 EUR",
+                },
+            ],
+            "liens": [],
+        }
+    )
+    monkeypatch.setattr(
+        activites, "chaine_depuis_reglages", lambda _: [FournisseurFake(reponses=[page])]
+    )
+
+    sortie = json.loads(await activites.generer_page("brief", None))
+
+    assert [bloc["prix_affiche"] for bloc in sortie["blocs"]] == [None, None]

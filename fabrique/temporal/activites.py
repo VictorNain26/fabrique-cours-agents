@@ -34,7 +34,11 @@ async def generer_page(brief: str, retour: str | None) -> str:
             max_essais=parametres.max_essais_reparation,
         ),
     )
-    return resultat.valeur.model_dump_json()
+    page = resultat.valeur
+    # Ce chemin n'a pas de noeud de tarification : un prix fourni par le modele
+    # serait publie tel quel.
+    blocs = [bloc.model_copy(update={"prix_affiche": None}) for bloc in page.blocs]
+    return page.model_copy(update={"blocs": blocs}).model_dump_json()
 
 
 @activity.defn
