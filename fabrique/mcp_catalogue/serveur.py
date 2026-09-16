@@ -14,6 +14,8 @@ from pydantic import BaseModel
 from fabrique.mcp_catalogue import catalogue
 from fabrique.mcp_catalogue.catalogue import Produit
 
+MESSAGE_REFERENCE_INCONNUE = "reference inconnue au catalogue"
+
 
 class PrixResolu(BaseModel):
     reference: str
@@ -55,7 +57,7 @@ def construire() -> MCPServer:
         """
         produit = catalogue.get(reference)
         if produit is None:
-            raise ToolError(f"reference inconnue au catalogue: {reference}")
+            raise ToolError(f"{MESSAGE_REFERENCE_INCONNUE}: {reference}")
         return PrixResolu(
             reference=produit.reference,
             prix_mensuel_eur=produit.prix_mensuel_eur,
