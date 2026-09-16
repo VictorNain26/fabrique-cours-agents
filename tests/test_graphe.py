@@ -319,3 +319,21 @@ def test_le_cout_de_la_page_cumule_tous_les_tours() -> None:
 
     assert etat["cout"] == pytest.approx(0.2)
     assert "redaction: essai 2, fake, 0.2000 EUR" in etat["journal"]
+
+
+def test_la_tarification_reelle_tourne_depuis_une_boucle_en_cours() -> None:
+    import asyncio
+
+    from fabrique.mcp_catalogue.client import resoudre_prix
+
+    graphe = _graphe(
+        [FournisseurFake(reponses=[_page_avec_tableau("vps-comfort")])],
+        resoudre_prix=resoudre_prix,
+    )
+
+    async def appelant():
+        return graphe.invoke({"brief": "b"}, config=_config("boucle-1"))
+
+    etat = asyncio.run(appelant())
+
+    assert etat["page"]["blocs"][1]["prix_affiche"] == "7.99 EUR / mois"

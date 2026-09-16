@@ -84,6 +84,20 @@ def test_le_client_resout_le_prix_par_le_protocole() -> None:
     assert prix.prix_mensuel_eur == catalogue.get("vps-comfort").prix_mensuel_eur
 
 
+def test_le_client_resout_depuis_une_boucle_deja_en_cours() -> None:
+    import asyncio
+
+    from fabrique.mcp_catalogue.client import resoudre_prix
+
+    async def appelant():
+        return resoudre_prix("vps-comfort")
+
+    prix = asyncio.run(appelant())
+
+    assert prix is not None
+    assert prix.prix_mensuel_eur == catalogue.get("vps-comfort").prix_mensuel_eur
+
+
 def test_le_client_rend_none_pour_une_reference_inconnue() -> None:
     from fabrique.mcp_catalogue.client import resoudre_prix
 

@@ -3,12 +3,16 @@
 Connexion en memoire au serveur du catalogue (`mcp.Client` accepte une
 instance `MCPServer`, docstring de mcp 2.2.0). Appele depuis du code
 synchrone : l'API execute ses routes `def` dans un pool de threads, ou aucune
-boucle asyncio ne tourne.
+boucle asyncio ne tourne. D'autres appelants synchrones tournent pourtant
+dans une boucle deja lancee (la tache d'une experience Langfuse, par
+exemple), ou `asyncio.run` refuse de demarrer : la resolution part alors
+dans un thread a part, qui a sa propre boucle.
 """
 
 from __future__ import annotations
 
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 from mcp import Client
 
@@ -27,4 +31,9 @@ async def _resoudre(reference: str) -> PrixResolu | None:
 
 
 def resoudre_prix(reference: str) -> PrixResolu | None:
-    return asyncio.run(_resoudre(reference))
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(_resoudre(reference))
+    with ThreadPoolExecutor(max_workers=1) as executeur:
+        return executeur.submit(asyncio.run, _resoudre(reference)).result()
