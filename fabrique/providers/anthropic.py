@@ -1,9 +1,9 @@
 """Fournisseur Anthropic (Claude), sortie structuree via tool-use.
 
-Le paquet `anthropic` n'est pas une dependance du projet : l'import est
-paresseux (fait dans le constructeur) pour que `import
-fabrique.providers.anthropic` ne casse jamais la collecte des tests quand le
-paquet est absent.
+`anthropic` est epingle dans requirements.txt, mais l'import reste fait dans le
+constructeur : l'API importe ce module au demarrage meme quand la chaine ne
+compte que le fournisseur factice, et les tests substituent un faux module
+`anthropic` au moment de la construction.
 
 Technique de sortie structuree documentee par Anthropic : declarer un outil
 unique dont le `input_schema` est le JSON Schema du modele Pydantic vise, puis
