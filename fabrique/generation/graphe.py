@@ -21,6 +21,7 @@ from langgraph.types import Overwrite, RetryPolicy, interrupt
 from fabrique.garde_fous.validateur import bloquantes, valider
 from fabrique.generation.reparation import generer_valide
 from fabrique.modeles import EtatPage, Page, Violation
+from fabrique.observabilite import tracer_violation
 from fabrique.providers.base import Fournisseur, Surcharge
 from fabrique.providers.repli import executer
 
@@ -74,6 +75,9 @@ def construire(
     def noeud_controle(etat: EtatPage) -> dict:
         page = Page.model_validate(etat["page"])
         violations = valider(page, pages_existantes)
+
+        for violation in violations:
+            tracer_violation(violation)
 
         return {
             "violations": [v.model_dump() for v in violations],

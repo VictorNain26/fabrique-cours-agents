@@ -87,3 +87,15 @@ def test_validation_deja_traitee_renvoie_409(client: TestClient) -> None:
     reponse = client.post(f"/pages/{thread_id}/validation", json={"approuve": True})
 
     assert reponse.status_code == 409
+
+
+def test_la_reponse_expose_qui_a_repondu_et_le_cout(client: TestClient) -> None:
+    """Un repli invisible cote HTTP fausse toute analyse a posteriori."""
+    reponse = client.post("/pages", json={"brief": "brief", "pages_existantes": []})
+    corps = reponse.json()
+
+    assert corps["fournisseur"] == "fake"
+    assert corps["cout"] is not None
+
+    relu = client.get(f"/pages/{corps['thread_id']}").json()
+    assert relu["fournisseur"] == "fake"

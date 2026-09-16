@@ -47,6 +47,10 @@ class CreerPageReponse(BaseModel):
     statut: Literal["en_attente_validation", "terminee"]
     page: dict | None
     violations: list[Violation]
+    # Qui a reellement repondu, et ce que la page a coute. Sans ces deux champs
+    # cote HTTP, un repli reste invisible pour l'appelant.
+    fournisseur: str | None = None
+    cout: float | None = None
 
 
 class EtatPageReponse(BaseModel):
@@ -54,6 +58,8 @@ class EtatPageReponse(BaseModel):
     statut: Literal["en_attente_validation", "publiee", "refusee", "terminee"]
     page: dict | None
     violations: list[Violation]
+    fournisseur: str | None = None
+    cout: float | None = None
 
 
 class ValidationRequete(BaseModel):
@@ -173,6 +179,8 @@ async def creer_page(requete: CreerPageRequete, request: Request) -> CreerPageRe
         statut=statut,
         page=resultat.get("page"),
         violations=[Violation.model_validate(v) for v in resultat.get("violations", [])],
+        fournisseur=resultat.get("fournisseur"),
+        cout=resultat.get("cout"),
     )
 
 
@@ -189,6 +197,8 @@ async def lire_page(thread_id: str, request: Request) -> EtatPageReponse:
         statut=_statut_depuis_etat(etat),
         page=etat.values.get("page"),
         violations=[Violation.model_validate(v) for v in etat.values.get("violations", [])],
+        fournisseur=etat.values.get("fournisseur"),
+        cout=etat.values.get("cout"),
     )
 
 
