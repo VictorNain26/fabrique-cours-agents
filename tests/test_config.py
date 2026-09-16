@@ -40,3 +40,17 @@ def test_la_chaine_de_fournisseurs_se_decoupe() -> None:
         "anthropic",
         "fake",
     ]
+
+
+def test_l_exemple_donne_un_mot_de_passe_postgres_utilisable() -> None:
+    """`cp .env.exemple .env && docker compose up` doit marcher sans edition.
+
+    Le compose declare POSTGRES_PASSWORD avec `:?`, donc une valeur vide le fait
+    echouer aussi surement qu'une variable absente.
+    """
+    lignes = dict(
+        ligne.split("=", 1)
+        for ligne in EXEMPLE.read_text().splitlines()
+        if ligne.strip() and not ligne.startswith("#") and "=" in ligne
+    )
+    assert lignes.get("POSTGRES_PASSWORD"), "POSTGRES_PASSWORD vide dans .env.exemple"

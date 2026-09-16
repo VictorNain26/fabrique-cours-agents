@@ -51,6 +51,7 @@ chez OVHcloud (0,67 €/M tokens), Haiku 4.5 chez Anthropic. C'est un cours et u
 démonstration : mille pages coûtent environ un euro.
 
 ```bash
+cp .env.exemple .env               # Postgres exige un mot de passe
 docker compose up --build          # api sur http://localhost:8000
 curl localhost:8000/sante
 ```
