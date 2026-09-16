@@ -26,9 +26,28 @@ REFERENCE = Path(__file__).parent / "reference.json"
 MARGE = 0.05
 
 
+def _page_tarifee(reference: str) -> str:
+    return json.dumps(
+        {
+            "titre_h1": "Nos offres",
+            "meta_description": (
+                "Comparez nos offres d'hebergement cote a cote et choisissez celle "
+                "qui convient a votre projet, avec un prix resolu depuis le catalogue."
+            ),
+            "blocs": [
+                {"type": "titre", "contenu": "Nos offres"},
+                {"type": "tableau_prix", "contenu": "Tarifs", "product_ref": reference},
+            ],
+            "liens": [],
+        }
+    )
+
+
 def tache(*, item, **_):
+    refs = item["expected_output"].get("refs_produit_attendues", [])
+    reponses = [_page_tarifee(refs[0])] if refs else None
     graphe = construire(
-        [FournisseurFake()],
+        [FournisseurFake(reponses=reponses)],
         set(item["metadata"].get("pages_existantes", [])),
         checkpointer=InMemorySaver(),
     )
