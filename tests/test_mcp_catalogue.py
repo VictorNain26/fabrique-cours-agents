@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from fabrique.mcp_catalogue import catalogue
-from fabrique.mcp_catalogue.serveur import construire
+from fabrique.mcp_catalogue.serveur import MESSAGE_REFERENCE_INCONNUE, construire
 
 
 @pytest.fixture
@@ -109,5 +109,7 @@ def test_le_client_leve_runtimeerror_en_cas_de_crash_catalogue(monkeypatch):
         lambda _: (_ for _ in ()).throw(ValueError("crash test")),
     )
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError) as erreur:
         resoudre_prix("vps-comfort")
+
+    assert MESSAGE_REFERENCE_INCONNUE not in str(erreur.value)

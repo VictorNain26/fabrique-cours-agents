@@ -33,10 +33,14 @@ interroge le catalogue. Le chapitre 5 et le chapitre 6 cessent d'être deux
 exercices séparés.
 
 ```
-brief -> redaction -> controle -> [correction -> redaction]* -> tarification -> [correction -> redaction]* -> validation humaine -> publication
-            |             |                          |                                     |
-    chaine de repli   garde-fous              client MCP catalogue                     interrupt()
+brief -> redaction -> controle -> [correction -> redaction -> controle]* -> tarification -> [correction -> redaction -> controle]* -> validation humaine -> publication
+            |             |                                    |                                              |
+    chaine de repli   garde-fous                        client MCP catalogue                              interrupt()
 ```
+
+Une correction repasse toujours par `redaction` puis `controle` avant de
+revenir à `tarification` : `controle` route lui-même vers `correction` ou
+`tarification`, jamais l'inverse.
 
 `tarification` résout, pour chaque `tableau_prix`, le prix réel via un client
 MCP connecté en mémoire au serveur du catalogue, et l'écrit dans
