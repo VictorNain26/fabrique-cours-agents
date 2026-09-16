@@ -98,6 +98,50 @@ l'arbre syntaxique de ta classe pour y traquer les appels non déterministes, et
 ses tests exécutent de vrais workflows via `WorkflowEnvironment` — un serveur de
 test embarqué dans le SDK, qui ne télécharge rien.
 
+## Observabilité
+
+Avec `LANGFUSE_PUBLIC_KEY` et `LANGFUSE_SECRET_KEY`, chaque page devient **une
+trace Langfuse**, dont l'identifiant est dérivé du `thread_id` : la reprise après
+validation humaine retombe dans la même trace.
+
+```
+trace "page"
+  redaction                  span : etat en entree, page + fournisseur + cout en sortie
+    essai ovhcloud           span, ERROR sur Surcharge : le repli se lit dans la trace
+      ovhcloud               generation : modele, tokens, cout_eur en metadonnee
+    essai anthropic          span
+      anthropic              generation : modele, tokens, cout en USD
+  controle                   span
+    LIEN_MORT                guardrail, avec un score booleen du meme nom
+  correction                 span : le retour reinjecte a la redaction
+  ...
+  publication                span, apres la validation humaine : meme trace
+```
+
+Chaque appel fournisseur, factice compris, est une observation `generation`. Les
+tokens sont notés dès la réponse, avant la validation du schéma : une sortie
+invalide a déjà été facturée, elle doit compter. Le coût suit les tarifs
+ci-dessous, sans en inventer :
+
+- **Haiku 4.5** : `cost_details` en dollars, l'unité que Langfuse attend ;
+- **OVHcloud** : facturé en euros, donc une métadonnée `cout_eur` plutôt qu'un
+  taux de change inventé ;
+- **tout autre modèle** : aucun coût déclaré, Langfuse le déduit de ses propres
+  définitions de modèles s'il en a une.
+
+Le budget du chapitre 8 ne change pas : `cout_par_appel` reste une enveloppe
+débitée avant l'essai, la trace montre ce que l'appel a réellement consommé.
+Pour diagnostiquer une régression, on filtre les traces `page`, on compare
+tokens et latence par `generation`, et on repère les essais en `ERROR` et les
+scores de garde-fous qui montent.
+
+Sans clés, rien n'est ouvert. Des variables **présentes mais vides**, comme dans
+`.env.exemple`, suffiraient pourtant au SDK pour démarrer un exportateur :
+`fabrique.observabilite.actif()` coupe donc avant d'appeler le SDK.
+`tests/test_observabilite_generations.py` lit les spans dans un exportateur
+OpenTelemetry en mémoire, et
+[`docs/langfuse.md`](docs/langfuse.md) explique comment brancher une instance.
+
 ## Vérification
 
 Chaque affirmation technique porte un niveau de preuve : `doc` (page officielle
@@ -151,6 +195,10 @@ l'argent à chaque push finirait désactivée.
 
 Les tests automatisés ne couvrent les adaptateurs réels que sur la traduction de
 leurs erreurs ; les appels ci-dessus ont été faits à la main, pas en CI.
+
+Le chemin Temporal n'ouvre pas de trace de page : ses générations arrivent en
+traces isolées, et le service `worker` du compose ne reçoit pas les clés
+Langfuse.
 
 Le déploiement sur une infrastructure réelle reste à faire : tout tourne en local
 ou sur un runner GitHub.

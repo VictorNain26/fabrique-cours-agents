@@ -11,6 +11,8 @@ import annotated_types
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 
+from fabrique.observabilite import observation
+
 from .base import ErreurFournisseur, Reponse
 
 
@@ -105,14 +107,25 @@ class FournisseurFake:
         self.appels.append({"invite": invite, "retour": retour})
         index = len(self.appels) - 1
 
-        if self.erreurs:
-            erreur = self.erreurs[min(index, len(self.erreurs) - 1)]
-            if erreur is not None:
-                raise erreur
+        with observation(
+            self.nom,
+            as_type="generation",
+            model=self.nom,
+            input={"invite": invite, "retour": retour},
+        ) as maj:
+            if self.erreurs:
+                erreur = self.erreurs[min(index, len(self.erreurs) - 1)]
+                if erreur is not None:
+                    raise erreur
 
-        if self.reponses:
-            texte = self.reponses[min(index, len(self.reponses) - 1)]
-        else:
-            texte = _json_exemple(schema)
+            if self.reponses:
+                texte = self.reponses[min(index, len(self.reponses) - 1)]
+            else:
+                texte = _json_exemple(schema)
 
-        return Reponse(texte=texte, modele=self.nom)
+            maj(
+                output=texte,
+                usage_details={"input": 0, "output": 0},
+                cost_details={"total": 0.0},
+            )
+            return Reponse(texte=texte, modele=self.nom)

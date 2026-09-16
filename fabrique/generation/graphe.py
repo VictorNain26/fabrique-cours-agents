@@ -14,6 +14,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Literal
 
+from langgraph.config import get_config
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Overwrite, RetryPolicy, interrupt
@@ -21,7 +22,7 @@ from langgraph.types import Overwrite, RetryPolicy, interrupt
 from fabrique.garde_fous.validateur import bloquantes, valider
 from fabrique.generation.reparation import generer_valide
 from fabrique.modeles import EtatPage, Page, Violation
-from fabrique.observabilite import tracer_violation
+from fabrique.observabilite import observation, tracer_violation
 from fabrique.providers.base import Fournisseur, Surcharge
 from fabrique.providers.repli import executer
 
@@ -37,6 +38,17 @@ def _dernier_retour(journal: list[str]) -> str | None:
         if entree.startswith("retour_correction:"):
             return entree
     return None
+
+
+def _observe(nom: str, noeud: Callable[[EtatPage], dict]) -> Callable[[EtatPage], dict]:
+    def enveloppe(etat: EtatPage) -> dict:
+        fil = get_config()["configurable"]["thread_id"]
+        with observation(nom, fil=fil, input=etat) as maj:
+            sortie = noeud(etat)
+            maj(output=sortie)
+            return sortie
+
+    return enveloppe
 
 
 def construire(
@@ -121,16 +133,16 @@ def construire(
     graphe = StateGraph(EtatPage)
     graphe.add_node(
         "redaction",
-        noeud_redaction,
+        _observe("redaction", noeud_redaction),
         # executer() possede deja la politique par categorie : bascule sur
         # Surcharge, un re-essai sur SortieInvalide, propagation sur Fatale. Ce
         # retry-ci ne couvre que le cas ou TOUTE la chaine etait saturee.
         retry_policy=RetryPolicy(max_attempts=2, retry_on=(Surcharge,)),
     )
-    graphe.add_node("controle", noeud_controle)
-    graphe.add_node("correction", noeud_correction)
+    graphe.add_node("controle", _observe("controle", noeud_controle))
+    graphe.add_node("correction", _observe("correction", noeud_correction))
     graphe.add_node("validation_humaine", noeud_validation_humaine)
-    graphe.add_node("publication", noeud_publication)
+    graphe.add_node("publication", _observe("publication", noeud_publication))
 
     graphe.add_edge(START, "redaction")
     graphe.add_edge("redaction", "controle")
