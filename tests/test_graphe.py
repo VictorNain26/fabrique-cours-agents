@@ -259,6 +259,33 @@ def test_le_graphe_bascule_sur_le_fournisseur_suivant_et_trace_lequel() -> None:
     assert etat["page"] is not None
 
 
+def test_a_la_limite_des_tours_les_violations_de_controle_et_de_tarification_remontent() -> None:
+    page = json.dumps(
+        {
+            "titre_h1": "Titre",
+            "meta_description": META,
+            "blocs": [
+                {"type": "titre", "contenu": "Titre un"},
+                {"type": "titre", "contenu": "Titre deux"},
+                {
+                    "type": "tableau_prix",
+                    "contenu": "Nos offres",
+                    "product_ref": "inventee",
+                },
+            ],
+            "liens": [],
+        }
+    )
+    fournisseur = FournisseurFake(reponses=[page])
+    graphe = _graphe([fournisseur], max_tours=1)
+
+    resultat = graphe.invoke({"brief": "b"}, config=_config("limite-1"))
+
+    interruption = resultat["__interrupt__"][0]
+    codes = {v["code"] for v in interruption.value["violations"]}
+    assert codes == {"H1_MULTIPLE", "REF_PRODUIT_INCONNUE"}
+
+
 def test_le_budget_arrete_la_chaine_avant_l_appel() -> None:
     from fabrique.providers.base import BudgetDepasse
 

@@ -123,6 +123,7 @@ def _graphe(
         "checkpointer": request.app.state.checkpointer,
         "max_tours": parametres.max_tours_correction,
         "budget_par_page": parametres.budget_par_page,
+        "budget_tokens_invite": parametres.budget_tokens_invite,
     }
     if publier is not None:
         arguments["publier"] = publier
@@ -140,12 +141,12 @@ def _statut_depuis_etat(etat) -> str:
 
 
 @app.get("/sante")
-async def sante() -> SanteReponse:
+def sante() -> SanteReponse:
     return SanteReponse(statut="ok", fournisseurs=reglages().chaine)
 
 
 @app.post("/pages", status_code=202)
-async def creer_page(requete: CreerPageRequete, request: Request) -> CreerPageReponse:
+def creer_page(requete: CreerPageRequete, request: Request) -> CreerPageReponse:
     thread_id = str(uuid.uuid4())
     graphe = _graphe(request, set(requete.pages_existantes))
 
@@ -163,7 +164,7 @@ async def creer_page(requete: CreerPageRequete, request: Request) -> CreerPageRe
 
 
 @app.get("/pages/{thread_id}")
-async def lire_page(thread_id: str, request: Request) -> EtatPageReponse:
+def lire_page(thread_id: str, request: Request) -> EtatPageReponse:
     graphe = _graphe(request, set())
     etat = graphe.get_state(_config(thread_id))
 
@@ -181,9 +182,7 @@ async def lire_page(thread_id: str, request: Request) -> EtatPageReponse:
 
 
 @app.post("/pages/{thread_id}/validation")
-async def valider_page(
-    thread_id: str, requete: ValidationRequete, request: Request
-) -> ValidationReponse:
+def valider_page(thread_id: str, requete: ValidationRequete, request: Request) -> ValidationReponse:
     config = _config(thread_id)
     etat = _graphe(request, set()).get_state(config)
 
