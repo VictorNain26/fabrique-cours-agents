@@ -46,9 +46,8 @@ openai 3.14.0 · fastapi 0.141.1 · psycopg 3.3.5
 | **La telemetrie sort reellement du processus** : un recepteur HTTP local recoit un evenement `score-create` apres une vraie generation | `tests/test_observabilite_reseau.py` |
 | Les reponses HTTP exposent le fournisseur qui a repondu et le cout de la page | test `test_la_reponse_expose_qui_a_repondu_et_le_cout` |
 | Le noeud de controle appelle bien `tracer_violation` : l'instrumentation est cablee, pas decorative | test `test_le_noeud_de_controle_trace_les_violations` |
-| **Les deux fournisseurs reels produisent une Page qui passe les garde-fous**, via la boucle de reparation | `tests/test_providers_reels.py`, lances avec `FABRIQUE_TESTS_REELS=1` |
-| **Une cle invalide est classee `Fatale`, pas `Surcharge`** : le repli ne boucle donc pas sur une erreur definitive | meme fichier, appel reel avec une cle bidon |
-| **L'adaptateur Anthropic fonctionne contre l'API reelle** sur `claude-sonnet-5` et sur `claude-haiku-4-5`, le modele par defaut : appel abouti, reponse parsee, erreurs traduites vers la taxonomie | `scripts_valider_fournisseur.py anthropic` et `tests/test_providers_reels.py` |
+| **Une cle invalide est classee `Fatale`, pas `Surcharge`** : le repli ne boucle donc pas sur une erreur definitive | `tests/test_providers_reels.py`, appel reel avec une cle bidon |
+| **L'adaptateur Anthropic fonctionne contre l'API reelle** sur `claude-sonnet-5` : appel abouti, reponse parsee, erreurs traduites vers la taxonomie | `scripts_valider_fournisseur.py anthropic`, qui instancie l'adaptateur avec son modele par defaut `claude-sonnet-5` |
 | **La boucle de reparation repare contre un vrai modele** : face a une `meta_description` hors bornes, l'erreur nommant le champ est renvoyee au modele et le second jet est conforme | execution avec `generer_valide(max_essais=3)` |
 | **L'adaptateur OVHcloud fonctionne contre l'API reelle** : `Meta-Llama-3_3-70B-Instruct` a repondu, 65 tokens entree / 546 sortie, Page valide au premier essai grace a `response_format` | `scripts_valider_fournisseur.py ovhcloud` avec une vraie cle |
 | **Le graphe complet tourne contre un vrai modele** : violation bloquante detectee, correction reinjectee, second jet conforme, interruption pour validation, publication unique apres approbation | execution du graphe avec `FournisseurAnthropic` |
@@ -80,6 +79,19 @@ La CI tourne sur le fournisseur factice. C'est délibéré : un test qui coûte 
 l'argent ou dépend d'un service tiers finit désactivé. Les adaptateurs réels ont
 leurs propres tests d'intégration dans `tests/test_providers_reels.py`, ignorés
 par défaut et lancés à la demande avec `FABRIQUE_TESTS_REELS=1`.
+
+La porte de non-régression rejoue le golden dataset sur ce même fournisseur
+factice : elle protège la plomberie (graphe, garde-fous, boucle de réparation,
+évaluateurs), pas la qualité d'un vrai modèle.
+
+Haiku 4.5 (`claude-haiku-4-5-20251001`) est le modèle Anthropic par défaut de la
+configuration et la cible de `tests/test_providers_reels.py`, mais aucune
+exécution de ce test n'est consignée : Haiku 4.5 n'est pas vérifié ici, et son
+coût par page reste une projection à partir du tarif publié.
+
+Le chemin Temporal n'est pas branché sur l'API : aucune route ne démarre de
+workflow. `tests/test_temporal.py` l'exécute dans le serveur de test du SDK, et le
+worker du compose l'a exécuté sur soumission manuelle depuis l'hôte.
 
 Le déploiement sur une infrastructure réelle reste à faire : tout ce qui précède
 tourne en local ou sur un runner GitHub.
