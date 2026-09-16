@@ -16,20 +16,18 @@ from langgraph.checkpoint.postgres import PostgresSaver
 from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, Field
 
-from fabrique.config import Reglages, reglages
+from fabrique.config import reglages
 from fabrique.generation.graphe import construire
 from fabrique.generation.reprise import en_attente, reprendre
+from fabrique.mcp_catalogue.client import CatalogueIndisponible
 from fabrique.modeles import Page, Violation
-from fabrique.providers.anthropic import FournisseurAnthropic
 from fabrique.providers.base import (
     BudgetDepasse,
     Fatale,
-    Fournisseur,
     SortieInvalide,
     Surcharge,
 )
-from fabrique.providers.fake import FournisseurFake
-from fabrique.providers.ovhcloud import FournisseurOVHcloud
+from fabrique.providers.chaine import chaine_depuis_reglages
 
 
 class SanteReponse(BaseModel):
@@ -73,25 +71,6 @@ class ValidationReponse(BaseModel):
     identifiant_publication: str | None
 
 
-def _un_fournisseur(nom: str, parametres: Reglages) -> Fournisseur:
-    if nom == "ovhcloud":
-        return FournisseurOVHcloud(
-            api_key=parametres.ovh_api_key,
-            base_url=parametres.ovh_base_url,
-            modele=parametres.ovh_modele,
-        )
-    if nom == "anthropic":
-        return FournisseurAnthropic(
-            api_key=parametres.anthropic_api_key,
-            modele=parametres.anthropic_modele,
-        )
-    return FournisseurFake()
-
-
-def _chaine_depuis_reglages(parametres: Reglages) -> list[Fournisseur]:
-    return [_un_fournisseur(nom, parametres) for nom in parametres.chaine]
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     parametres = reglages()
@@ -103,7 +82,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             checkpointer = InMemorySaver()
 
         app.state.checkpointer = checkpointer
-        app.state.fournisseurs = _chaine_depuis_reglages(parametres)
+        app.state.fournisseurs = chaine_depuis_reglages(parametres)
         yield
 
 
@@ -118,6 +97,13 @@ async def _gerer_budget_depasse(request: Request, exc: BudgetDepasse) -> JSONRes
 @app.exception_handler(Surcharge)
 async def _gerer_surcharge(request: Request, exc: Surcharge) -> JSONResponse:
     return JSONResponse(status_code=503, content={"detail": str(exc)})
+
+
+@app.exception_handler(CatalogueIndisponible)
+async def _gerer_catalogue_indisponible(
+    request: Request, exc: CatalogueIndisponible
+) -> JSONResponse:
+    return JSONResponse(status_code=503, content={"detail": f"catalogue indisponible : {exc}"})
 
 
 @app.exception_handler(SortieInvalide)
@@ -145,6 +131,7 @@ def _graphe(
         "checkpointer": request.app.state.checkpointer,
         "max_tours": parametres.max_tours_correction,
         "budget_par_page": parametres.budget_par_page,
+        "budget_tokens_invite": parametres.budget_tokens_invite,
     }
     if publier is not None:
         arguments["publier"] = publier
@@ -162,12 +149,12 @@ def _statut_depuis_etat(etat) -> str:
 
 
 @app.get("/sante")
-async def sante() -> SanteReponse:
+def sante() -> SanteReponse:
     return SanteReponse(statut="ok", fournisseurs=reglages().chaine)
 
 
 @app.post("/pages", status_code=202)
-async def creer_page(requete: CreerPageRequete, request: Request) -> CreerPageReponse:
+def creer_page(requete: CreerPageRequete, request: Request) -> CreerPageReponse:
     thread_id = str(uuid.uuid4())
     graphe = _graphe(request, set(requete.pages_existantes))
 
@@ -185,7 +172,7 @@ async def creer_page(requete: CreerPageRequete, request: Request) -> CreerPageRe
 
 
 @app.get("/pages/{thread_id}")
-async def lire_page(thread_id: str, request: Request) -> EtatPageReponse:
+def lire_page(thread_id: str, request: Request) -> EtatPageReponse:
     graphe = _graphe(request, set())
     etat = graphe.get_state(_config(thread_id))
 
@@ -203,9 +190,7 @@ async def lire_page(thread_id: str, request: Request) -> EtatPageReponse:
 
 
 @app.post("/pages/{thread_id}/validation")
-async def valider_page(
-    thread_id: str, requete: ValidationRequete, request: Request
-) -> ValidationReponse:
+def valider_page(thread_id: str, requete: ValidationRequete, request: Request) -> ValidationReponse:
     config = _config(thread_id)
     etat = _graphe(request, set()).get_state(config)
 

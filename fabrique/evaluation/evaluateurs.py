@@ -13,6 +13,7 @@ from typing import Any
 from langfuse import Evaluation
 
 from fabrique.garde_fous.validateur import bloquantes, valider
+from fabrique.mcp_catalogue import catalogue
 from fabrique.modeles import BlocPage, Page
 
 
@@ -88,14 +89,23 @@ def refs_produit_resolues(
     **kwargs: Any,
 ) -> Evaluation:
     page = _sortie_comme_page(output)
-    manquantes = [
-        bloc.contenu for bloc in page.blocs if bloc.type == "tableau_prix" and not bloc.product_ref
+    fautifs = [
+        bloc.contenu
+        for bloc in page.blocs
+        if bloc.type == "tableau_prix" and not _prix_du_catalogue(bloc)
     ]
 
     return Evaluation(
         name="refs_produit_resolues",
-        value=1.0 if not manquantes else 0.0,
+        value=1.0 if not fautifs else 0.0,
         comment="toutes les refs produit sont resolues"
-        if not manquantes
-        else f"blocs sans product_ref: {manquantes}",
+        if not fautifs
+        else f"blocs sans prix resolu depuis le catalogue: {fautifs}",
     )
+
+
+def _prix_du_catalogue(bloc: BlocPage) -> bool:
+    produit = catalogue.get(bloc.product_ref) if bloc.product_ref else None
+    if produit is None:
+        return False
+    return bloc.prix_affiche == f"{produit.prix_mensuel_eur:.2f} EUR / mois"

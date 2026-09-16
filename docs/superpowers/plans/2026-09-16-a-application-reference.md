@@ -292,7 +292,9 @@ def _valider_titre_unique(page, pages_existantes):
 def _prix_connus(reference):
     if reference != "vps-comfort":
         return None
-    return PrixResolu(reference=reference, prix_mensuel_eur=7.99, libelle_affichable="7.99 EUR / mois")
+    return PrixResolu(
+        reference=reference, prix_mensuel_eur=7.99, libelle_affichable="7.99 EUR / mois"
+    )
 ```
 
 New tests (plus the existing ones migrated to `_graphe`) :
@@ -338,7 +340,9 @@ def test_les_retours_sont_compactes_sous_le_budget():
         return messages
 
     fournisseur = FournisseurFake(reponses=[PAGE_INVALIDE, PAGE_INVALIDE, PAGE_VALIDE])
-    graphe = _graphe([fournisseur], compacter=compacter_espion, budget_tokens_invite=321, max_tours=3)
+    graphe = _graphe(
+        [fournisseur], compacter=compacter_espion, budget_tokens_invite=321, max_tours=3
+    )
 
     graphe.invoke({"brief": "b"}, config=_config("ctx-1"))
 
@@ -363,7 +367,9 @@ def test_les_dependances_injectees_sont_utilisees():
         appels.append(budget)
         return executer(fournisseurs, budget, appel)
 
-    graphe = _graphe([FournisseurFake(reponses=[PAGE_VALIDE])], repli=repli_espion, budget_par_page=0.3)
+    graphe = _graphe(
+        [FournisseurFake(reponses=[PAGE_VALIDE])], repli=repli_espion, budget_par_page=0.3
+    )
     graphe.invoke({"brief": "b"}, config=_config("di-1"))
 
     assert appels == [0.3]
@@ -373,16 +379,22 @@ with helper :
 
 ```python
 def _page_avec_tableau(reference, prix_affiche=None):
-    return json.dumps({
-        "titre_h1": "Titre",
-        "meta_description": META,
-        "blocs": [
-            {"type": "titre", "contenu": "Titre unique"},
-            {"type": "tableau_prix", "contenu": "Nos offres", "product_ref": reference,
-             "prix_affiche": prix_affiche},
-        ],
-        "liens": [],
-    })
+    return json.dumps(
+        {
+            "titre_h1": "Titre",
+            "meta_description": META,
+            "blocs": [
+                {"type": "titre", "contenu": "Titre unique"},
+                {
+                    "type": "tableau_prix",
+                    "contenu": "Nos offres",
+                    "product_ref": reference,
+                    "prix_affiche": prix_affiche,
+                },
+            ],
+            "liens": [],
+        }
+    )
 ```
 
 The budget and fallback tests (`test_le_graphe_bascule...`, `test_le_budget_arrete...`) keep the default `repli` and are integration tests of chapters 4 and 6 (marker added in plan B). `test_tous_les_noeuds_sont_declares` adds `"tarification"`. In `tests/test_observabilite_generations.py:88` expected root spans become `["redaction", "controle", "correction", "redaction", "controle", "tarification", "publication"]`.
@@ -390,13 +402,20 @@ The budget and fallback tests (`test_le_graphe_bascule...`, `test_le_budget_arre
 In `tests/test_evaluation.py` : `PAGE_BONNE`'s `tableau_prix` uses `"product_ref": "vps-comfort", "prix_affiche": "7.99 EUR / mois"`; add :
 
 ```python
-    def test_prix_affiche_different_du_catalogue_est_note_zero(self):
-        page = {**PAGE_BONNE, "blocs": [
+def test_prix_affiche_different_du_catalogue_est_note_zero(self):
+    page = {
+        **PAGE_BONNE,
+        "blocs": [
             {"type": "titre", "contenu": "Titre"},
-            {"type": "tableau_prix", "contenu": "Offres", "product_ref": "vps-comfort",
-             "prix_affiche": "1.00 EUR / mois"},
-        ]}
-        assert refs_produit_resolues(input="brief", output=page).value == 0.0
+            {
+                "type": "tableau_prix",
+                "contenu": "Offres",
+                "product_ref": "vps-comfort",
+                "prix_affiche": "1.00 EUR / mois",
+            },
+        ],
+    }
+    assert refs_produit_resolues(input="brief", output=page).value == 0.0
 ```
 
 and adapt the other `refs_produit_resolues` cases the same way (a `tableau_prix` without `prix_affiche` scores 0).
@@ -484,13 +503,14 @@ class BlocPage(BaseModel):
 Routing : `controle` → `correction` if blocking and `bornes`, else `tarification` ; `tarification` → `correction` if blocking and `bornes`, else `validation_humaine`. Both use the same `route_bloquante(suivant)` factory :
 
 ```python
-    def route_si_bloquant(suivant: str):
-        def route(etat: EtatPage) -> str:
-            violations = [Violation.model_validate(v) for v in etat.get("violations", [])]
-            if validateur.bloquantes(violations) and bornes(etat):
-                return "correction"
-            return suivant
-        return route
+def route_si_bloquant(suivant: str):
+    def route(etat: EtatPage) -> str:
+        violations = [Violation.model_validate(v) for v in etat.get("violations", [])]
+        if validateur.bloquantes(violations) and bornes(etat):
+            return "correction"
+        return suivant
+
+    return route
 ```
 
 Wire `graphe.add_conditional_edges("controle", route_si_bloquant("tarification"), ["correction", "tarification"])` and `graphe.add_conditional_edges("tarification", route_si_bloquant("validation_humaine"), ["correction", "validation_humaine"])`. Wrap `tarification` with `_observe`. Remove `_dernier_retour`, `Overwrite` import and its WHY comment. Update the module docstring flow.
@@ -531,9 +551,17 @@ def test_une_page_avec_tableau_de_prix_passe_par_mcp_via_l_api(client, monkeypat
     import json
     from fabrique.providers.fake import FournisseurFake
 
-    page = json.dumps({"titre_h1": "VPS", "meta_description": "d" * 130, "blocs": [
-        {"type": "titre", "contenu": "VPS"},
-        {"type": "tableau_prix", "contenu": "Offres", "product_ref": "vps-pro"}], "liens": []})
+    page = json.dumps(
+        {
+            "titre_h1": "VPS",
+            "meta_description": "d" * 130,
+            "blocs": [
+                {"type": "titre", "contenu": "VPS"},
+                {"type": "tableau_prix", "contenu": "Offres", "product_ref": "vps-pro"},
+            ],
+            "liens": [],
+        }
+    )
     client.app.state.fournisseurs = [FournisseurFake(reponses=[page])]
 
     corps = client.post("/pages", json={"brief": "b"}).json()

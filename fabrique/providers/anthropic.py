@@ -50,7 +50,8 @@ class FournisseurAnthropic:
     def __init__(
         self,
         api_key: str,
-        modele: str = "claude-sonnet-5",
+        *,
+        modele: str,
         cout_par_appel: float = 0.0,
     ) -> None:
         try:

@@ -36,3 +36,17 @@ def test_reference_presente_et_identique_passe(reference):
 
 def test_reference_versionnee_existe():
     assert ci.REFERENCE.exists()
+
+
+def test_la_porte_exerce_la_tarification_quand_le_cas_attend_des_refs():
+    from fabrique.evaluation.dataset import CAS
+    from fabrique.evaluation.experience import _item_de
+
+    cas = next(c for c in CAS if c.attendus.get("refs_produit_attendues"))
+    reference = cas.attendus["refs_produit_attendues"][0]
+
+    page = ci.tache(item=_item_de(cas))
+
+    tableaux = [b for b in page["blocs"] if b["type"] == "tableau_prix"]
+    assert [b["product_ref"] for b in tableaux] == [reference]
+    assert tableaux[0]["prix_affiche"].endswith("EUR / mois")

@@ -7,13 +7,15 @@ import uuid
 
 import pytest
 from temporalio import activity
+from temporalio.client import WorkflowFailureError
+from temporalio.exceptions import ActivityError, ApplicationError
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
 from fabrique.generation.reparation import generer_valide
 from fabrique.modeles import Page
 from fabrique.providers.fake import FournisseurFake
-from fabrique.temporal.activites import controler_page, publier_page
+from fabrique.temporal.activites import controler_page, generer_page, publier_page
 from fabrique.temporal.workflows import GenerationPage
 
 TASK_QUEUE = "fabrique-test"
@@ -42,10 +44,10 @@ PAGE_VALIDE = _page_json(titre_unique=True)
 
 def _mock_generer_page(fake: FournisseurFake):
     @activity.defn(name="generer_page")
-    async def generer_page(brief: str, retour: str | None) -> str:
+    async def generer_page(brief: str, retour: str | None, deja_depense: float) -> dict:
         invite = brief if retour is None else f"{brief}\n\n{retour}"
         page = generer_valide(fake, invite=invite, schema=Page, systeme="test")
-        return page.model_dump_json()
+        return {"page": page.model_dump_json(), "cout": 0.0}
 
     return generer_page
 
@@ -102,6 +104,51 @@ async def test_borne_max_tours_sans_boucle_infinie(env: WorkflowEnvironment):
     assert len(fake.appels) == 3
 
 
+async def _executer_reel(env: WorkflowEnvironment, brief: str) -> dict:
+    async with Worker(
+        env.client,
+        task_queue=TASK_QUEUE,
+        workflows=[GenerationPage],
+        activities=[generer_page, controler_page, publier_page],
+    ):
+        return await env.client.execute_workflow(
+            GenerationPage.run,
+            args=[brief, []],
+            id=f"wf-{uuid.uuid4()}",
+            task_queue=TASK_QUEUE,
+        )
+
+
+async def test_second_tour_respecte_le_budget_deja_depense(env: WorkflowEnvironment, monkeypatch):
+    from fabrique.temporal import activites
+
+    fake = FournisseurFake(reponses=[PAGE_INVALIDE, PAGE_VALIDE])
+    fake.cout_par_appel = 0.3
+    monkeypatch.setattr(activites, "chaine_depuis_reglages", lambda _: [fake])
+
+    with pytest.raises(WorkflowFailureError) as excinfo:
+        await _executer_reel(env, "brief")
+
+    cause = excinfo.value.cause
+    assert isinstance(cause, ActivityError)
+    assert isinstance(cause.cause, ApplicationError)
+    assert cause.cause.type == "BudgetDepasse"
+    assert len(fake.appels) == 1
+
+
+async def test_cout_du_resultat_cumule_les_tours(env: WorkflowEnvironment, monkeypatch):
+    from fabrique.temporal import activites
+
+    fake = FournisseurFake(reponses=[PAGE_INVALIDE, PAGE_VALIDE])
+    fake.cout_par_appel = 0.1
+    monkeypatch.setattr(activites, "chaine_depuis_reglages", lambda _: [fake])
+
+    resultat = await _executer_reel(env, "brief")
+
+    assert resultat["publiee"] is True
+    assert resultat["cout"] == pytest.approx(0.2)
+
+
 async def test_publication_idempotente():
     cle = f"idem-{uuid.uuid4()}"
 
@@ -153,3 +200,32 @@ def test_workflow_ne_contient_aucun_appel_non_deterministe():
 
     fautifs = [a for a in _appels(corps) if a in INTERDITS]
     assert fautifs == []
+
+
+async def test_generer_page_efface_un_prix_invente_par_le_modele(monkeypatch):
+    from fabrique.temporal import activites
+
+    page = json.dumps(
+        {
+            "titre_h1": "Titre",
+            "meta_description": META,
+            "blocs": [
+                {"type": "titre", "contenu": "Titre unique", "prix_affiche": "0.01 EUR"},
+                {
+                    "type": "tableau_prix",
+                    "contenu": "Nos offres",
+                    "product_ref": "vps-comfort",
+                    "prix_affiche": "0.01 EUR",
+                },
+            ],
+            "liens": [],
+        }
+    )
+    monkeypatch.setattr(
+        activites, "chaine_depuis_reglages", lambda _: [FournisseurFake(reponses=[page])]
+    )
+
+    resultat = await activites.generer_page("brief", None, 0.0)
+    sortie = json.loads(resultat["page"])
+
+    assert [bloc["prix_affiche"] for bloc in sortie["blocs"]] == [None, None]

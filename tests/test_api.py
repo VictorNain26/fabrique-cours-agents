@@ -99,3 +99,110 @@ def test_la_reponse_expose_qui_a_repondu_et_le_cout(client: TestClient) -> None:
 
     relu = client.get(f"/pages/{corps['thread_id']}").json()
     assert relu["fournisseur"] == "fake"
+
+
+def test_une_page_avec_tableau_de_prix_passe_par_mcp_via_l_api(client) -> None:
+    import json
+
+    from fabrique.providers.fake import FournisseurFake
+
+    page = json.dumps(
+        {
+            "titre_h1": "VPS",
+            "meta_description": "d" * 130,
+            "blocs": [
+                {"type": "titre", "contenu": "VPS"},
+                {"type": "tableau_prix", "contenu": "Offres", "product_ref": "vps-pro"},
+            ],
+            "liens": [],
+        }
+    )
+    client.app.state.fournisseurs = [FournisseurFake(reponses=[page])]
+
+    corps = client.post("/pages", json={"brief": "b"}).json()
+
+    assert corps["page"]["blocs"][1]["prix_affiche"] == "31.99 EUR / mois"
+
+
+def test_les_routes_ne_bloquent_pas_la_boucle() -> None:
+    import inspect
+
+    from fabrique import api
+
+    for route in (api.sante, api.creer_page, api.lire_page, api.valider_page):
+        assert not inspect.iscoroutinefunction(route), route.__name__
+
+
+def test_le_budget_de_tokens_invite_atteint_le_graphe(client: TestClient, monkeypatch) -> None:
+    from fabrique import api
+    from fabrique.generation.graphe import construire as construire_reel
+
+    monkeypatch.setenv("BUDGET_TOKENS_INVITE", "777")
+    reglages.cache_clear()
+
+    captures: dict = {}
+
+    def espion(*args, **kwargs):
+        captures.update(kwargs)
+        return construire_reel(*args, **kwargs)
+
+    monkeypatch.setattr(api, "construire", espion)
+
+    client.post("/pages", json={"brief": "b", "pages_existantes": []})
+
+    assert captures["budget_tokens_invite"] == 777
+
+
+def test_un_budget_epuise_sur_plusieurs_tours_renvoie_402(client: TestClient) -> None:
+    import json
+
+    from fabrique.providers.fake import FournisseurFake
+
+    def page(titres: int) -> str:
+        return json.dumps(
+            {
+                "titre_h1": "VPS",
+                "meta_description": "d" * 130,
+                "blocs": [{"type": "titre", "contenu": f"Titre {i}"} for i in range(titres)],
+                "liens": [],
+            }
+        )
+
+    fournisseur = FournisseurFake(reponses=[page(2), page(1)])
+    fournisseur.cout_par_appel = reglages().budget_par_page * 0.6
+    client.app.state.fournisseurs = [fournisseur]
+
+    reponse = client.post("/pages", json={"brief": "b"})
+
+    assert reponse.status_code == 402
+    assert "budget" in reponse.json()["detail"]
+
+
+def test_un_catalogue_en_panne_renvoie_un_503_json(client: TestClient, monkeypatch) -> None:
+    import json
+
+    from fabrique.providers.fake import FournisseurFake
+
+    def en_panne(_reference):
+        raise ValueError("catalogue en panne")
+
+    monkeypatch.setattr("fabrique.mcp_catalogue.catalogue.get", en_panne)
+    page = json.dumps(
+        {
+            "titre_h1": "VPS",
+            "meta_description": "d" * 130,
+            "blocs": [
+                {"type": "titre", "contenu": "VPS"},
+                {"type": "tableau_prix", "contenu": "Offres", "product_ref": "vps-pro"},
+            ],
+            "liens": [],
+        }
+    )
+    client.app.state.fournisseurs = [FournisseurFake(reponses=[page])]
+    sans_relance = TestClient(client.app, raise_server_exceptions=False)
+
+    reponse = sans_relance.post("/pages", json={"brief": "b"})
+
+    assert reponse.status_code == 503
+    assert reponse.headers["content-type"] == "application/json"
+    assert reponse.json()["detail"]

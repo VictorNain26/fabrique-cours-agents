@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from fabrique.mcp_catalogue import catalogue
-from fabrique.mcp_catalogue.serveur import construire
+from fabrique.mcp_catalogue.serveur import MESSAGE_REFERENCE_INCONNUE, construire
 
 
 @pytest.fixture
@@ -73,3 +73,57 @@ async def test_get_produit_reference_inconnue_renvoie_none(serveur):
     resultat = await serveur.call_tool("get_produit", {"reference": "inexistant"})
 
     assert resultat.structured_content["result"] is None
+
+
+def test_le_client_resout_le_prix_par_le_protocole() -> None:
+    from fabrique.mcp_catalogue.client import resoudre_prix
+
+    prix = resoudre_prix("vps-comfort")
+
+    assert prix is not None
+    assert prix.prix_mensuel_eur == catalogue.get("vps-comfort").prix_mensuel_eur
+
+
+def test_le_client_resout_depuis_une_boucle_deja_en_cours() -> None:
+    import asyncio
+
+    from fabrique.mcp_catalogue.client import resoudre_prix
+
+    async def appelant():
+        return resoudre_prix("vps-comfort")
+
+    prix = asyncio.run(appelant())
+
+    assert prix is not None
+    assert prix.prix_mensuel_eur == catalogue.get("vps-comfort").prix_mensuel_eur
+
+
+def test_le_client_rend_none_pour_une_reference_inconnue() -> None:
+    from fabrique.mcp_catalogue.client import resoudre_prix
+
+    assert resoudre_prix("inexistant") is None
+
+
+@pytest.mark.asyncio
+async def test_une_reference_inconnue_est_une_erreur_d_outil_nommee(serveur):
+    from mcp import Client
+
+    async with Client(serveur) as client:
+        resultat = await client.call_tool("resoudre_prix", {"reference": "inexistant"})
+
+    assert resultat.is_error is True
+    assert "inexistant" in resultat.content[0].text
+
+
+def test_le_client_signale_un_catalogue_indisponible_en_cas_de_crash(monkeypatch):
+    from fabrique.mcp_catalogue.client import CatalogueIndisponible, resoudre_prix
+
+    monkeypatch.setattr(
+        "fabrique.mcp_catalogue.catalogue.get",
+        lambda _: (_ for _ in ()).throw(ValueError("crash test")),
+    )
+
+    with pytest.raises(CatalogueIndisponible) as erreur:
+        resoudre_prix("vps-comfort")
+
+    assert MESSAGE_REFERENCE_INCONNUE not in str(erreur.value)

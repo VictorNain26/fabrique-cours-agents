@@ -29,7 +29,7 @@ CAS: list[CasGolden] = [
         attendus={
             "nb_h1": 1,
             "codes_interdits": ["PRIX_EN_DUR", "H1_MULTIPLE", "REF_PRODUIT_MANQUANTE"],
-            "refs_produit_attendues": ["hebergement-mutualise"],
+            "refs_produit_attendues": ["vps-starter"],
         },
     ),
     CasGolden(
@@ -45,7 +45,7 @@ CAS: list[CasGolden] = [
         attendus={
             "nb_h1": 1,
             "codes_interdits": ["PRIX_EN_DUR", "H1_MULTIPLE", "REF_PRODUIT_MANQUANTE"],
-            "refs_produit_attendues": ["vps-petit", "vps-moyen", "vps-grand"],
+            "refs_produit_attendues": ["vps-starter", "vps-comfort", "vps-elite"],
         },
     ),
     CasGolden(
@@ -70,7 +70,7 @@ CAS: list[CasGolden] = [
         attendus={
             "nb_h1": 1,
             "codes_interdits": ["PRIX_EN_DUR", "H1_MULTIPLE", "REF_PRODUIT_MANQUANTE"],
-            "refs_produit_attendues": ["hebergement-mutualise", "vps-petit"],
+            "refs_produit_attendues": ["vps-starter"],
         },
     ),
     CasGolden(
@@ -98,7 +98,7 @@ CAS: list[CasGolden] = [
         attendus={
             "nb_h1": 1,
             "codes_interdits": ["PRIX_EN_DUR", "H1_MULTIPLE", "REF_PRODUIT_MANQUANTE"],
-            "refs_produit_attendues": ["stockage-objet"],
+            "refs_produit_attendues": ["stockage-standard"],
         },
     ),
     CasGolden(
@@ -140,7 +140,7 @@ CAS: list[CasGolden] = [
         attendus={
             "nb_h1": 1,
             "codes_interdits": ["PRIX_EN_DUR"],
-            "refs_produit_attendues": ["vps-moyen"],
+            "refs_produit_attendues": ["vps-comfort"],
         },
     ),
     CasGolden(
@@ -162,7 +162,7 @@ CAS: list[CasGolden] = [
         attendus={
             "nb_h1": 1,
             "codes_interdits": ["REF_PRODUIT_MANQUANTE", "PRIX_EN_DUR"],
-            "refs_produit_attendues": ["hebergement-mutualise"],
+            "refs_produit_attendues": ["vps-starter"],
         },
     ),
     CasGolden(
