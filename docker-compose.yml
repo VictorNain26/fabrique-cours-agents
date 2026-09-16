@@ -32,5 +32,46 @@ services:
     ports:
       - "8000:8000"
 
+  # Postgres du service "base" reutilise comme backend Temporal (DB=postgres12
+  # cree ses propres bases "temporal"/"temporal_visibility") : un seul Postgres
+  # tourne sur la machine, pas de conteneur supplementaire pour la memoire deja
+  # comptee. Pas d'UI web (temporalio/ui) : elle n'apporte rien a l'automatise
+  # et coute de la RAM sur une machine a ~4 Go libres.
+  temporal:
+    image: temporalio/auto-setup:latest
+    depends_on:
+      base:
+        condition: service_healthy
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-fabrique}
+      POSTGRES_PWD: ${POSTGRES_PASSWORD}
+      POSTGRES_SEEDS: base
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CLI_ADDRESS: temporal:7233
+    ports:
+      - "7233:7233"
+
+  worker:
+    build: .
+    command: python -m fabrique.temporal.worker
+    restart: on-failure
+    depends_on:
+      base:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+    environment:
+      TEMPORAL_HOST: temporal:7233
+      POSTGRES_HOST: base
+      POSTGRES_USER: ${POSTGRES_USER:-fabrique}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-fabrique}
+      FOURNISSEURS: ${FOURNISSEURS:-fake}
+      BUDGET_PAR_PAGE: ${BUDGET_PAR_PAGE:-0.50}
+      OVH_API_KEY: ${OVH_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+
 volumes:
   donnees:

@@ -34,6 +34,11 @@ openai 3.14.0 · fastapi 0.141.1 · psycopg 3.3.5
 | `PostgresSaver.setup()` cree bien `checkpoints`, `checkpoint_blobs`, `checkpoint_writes`, `checkpoint_migrations` | `\dt` dans le conteneur Postgres du compose |
 | **Une generation en attente de validation survit au redemarrage du conteneur api** et reste validable ensuite | thread cree, `docker compose restart api`, relecture puis validation reussie |
 | Rejouer une validation deja consommee renvoie 409, un brief vide renvoie 422 | appels curl contre le conteneur |
+| **Le serveur Temporal auto-heberge tourne dans le compose et le worker execute de vrais workflows** : workflow soumis depuis l'hote, execute par le worker du conteneur, page publiee | `docker compose up` puis `client.execute_workflow(GenerationPage.run, ...)` |
+| Les quatre services (api, base, temporal, worker) tiennent ensemble dans ~460 Mo | `docker stats` sur la stack complete |
+| `WorkflowEnvironment.start_time_skipping()` demarre **sans acces reseau externe** : le serveur de test est embarque dans le SDK, rien n'est telecharge | resolution DNS bloquee puis demarrage reussi |
+| Le SDK Langfuse a **deux chemins d'export distincts** : les spans en OTLP protobuf vers `/api/public/otel/v1/traces`, les scores en REST JSON vers `/api/public/ingestion` avec `Authorization: Basic` | lecture de `langfuse/_client/span_processor.py` et `langfuse/_utils/request.py` |
+| **La telemetrie sort reellement du processus** : un recepteur HTTP local recoit un evenement `score-create` apres une vraie generation | `tests/test_observabilite_reseau.py` |
 | Les reponses HTTP exposent le fournisseur qui a repondu et le cout de la page | test `test_la_reponse_expose_qui_a_repondu_et_le_cout` |
 | Le noeud de controle appelle bien `tracer_violation` : l'instrumentation est cablee, pas decorative | test `test_le_noeud_de_controle_trace_les_violations` |
 | **Les deux fournisseurs reels produisent une Page qui passe les garde-fous**, via la boucle de reparation | `tests/test_providers_reels.py`, lances avec `FABRIQUE_TESTS_REELS=1` |
@@ -53,6 +58,8 @@ openai 3.14.0 · fastapi 0.141.1 · psycopg 3.3.5
 | AI Endpoints est compatible OpenAI ; `base_url='https://oai.endpoints.kepler.ai.cloud.ovh.net/v1'` ; `response_format` accepte un modèle Pydantic ; modèle documenté `Meta-Llama-3_3-70B-Instruct` | [docs.ovhcloud.com — structured output](https://docs.ovhcloud.com/en/guides/public-cloud/ai-machine-learning/ai-endpoints-structured-output) |
 | « Structured output currently supports a subset of the JSON schema specification. Some features may not be compatible. » — c'est ce qui justifie la boucle de réparation | même page |
 | Les six contraintes de déterminisme Temporal, mot pour mot | [docs.temporal.io — workflow basics](https://docs.temporal.io/develop/python/workflows/basics) |
+| Le serveur Temporal est sous licence MIT : l'auto-hébergement est libre, c'est Temporal Cloud qui est payant | [github.com/temporalio/temporal](https://github.com/temporalio/temporal) |
+| Langfuse est MIT (hors `ee/`) et auto-hébergeable, au prix de quatre services : Postgres, ClickHouse, Redis, S3 | [langfuse.com/self-hosting](https://langfuse.com/self-hosting), voir [`langfuse.md`](langfuse.md) |
 
 ## Position d'auteur, à présenter comme telle
 
@@ -73,6 +80,7 @@ Le workflow GitHub Actions n'a jamais tourné sur un runner. `actions/checkout@v
 et `actions/setup-python@v7` ont été relevées sur leurs pages de releases, pas
 éprouvées.
 
-Temporal n'est pas dans l'application : le chapitre 4 reste théorique. Langfuse
-est instrumenté et le câblage est testé, mais aucun serveur Langfuse n'a jamais
-reçu de trace.
+Aucun serveur Langfuse n'a tourné : la preuve porte sur le fait que le SDK émet
+bien une requête avec le bon contenu, pas sur son acceptation par une instance
+réelle. L'auto-hébergement exige quatre services, trop pour la machine de
+développement.

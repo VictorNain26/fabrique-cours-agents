@@ -55,6 +55,12 @@ docker compose up --build          # api sur http://localhost:8000
 curl localhost:8000/sante
 ```
 
+Quatre services, environ 460 Mo au total : l'API, Postgres, un **serveur Temporal
+auto-hébergé** (MIT, pas Temporal Cloud) et le worker qui exécute les workflows.
+LangGraph orchestre le chemin avec validation humaine, Temporal le chemin
+automatique et durable — les deux partagent les mêmes garde-fous et le même
+catalogue.
+
 | Route | Rôle |
 |---|---|
 | `POST /pages` | lance une génération, renvoie un `thread_id` et s'arrête pour validation |
@@ -69,7 +75,7 @@ curl localhost:8000/sante
 | 1 | Pydantic v2 et réparation | `fabrique/generation/reparation.py` |
 | 2 | LangGraph : le vrai StateGraph | `fabrique/generation/graphe.py` |
 | 3 | Gestion du contexte | `fabrique/generation/contexte.py` |
-| 4 | Temporal : le workflow déterministe | *(théorique, atelier autonome)* |
+| 4 | Temporal : le workflow déterministe | `fabrique/temporal/workflows.py` |
 | 5 | Garde-fous déterministes | `fabrique/garde_fous/validateur.py` |
 | 6 | MCP : un vrai serveur | `fabrique/mcp_catalogue/serveur.py` |
 | 7 | Évaluation et non-régression | `fabrique/evaluation/experience.py` |
@@ -84,9 +90,11 @@ l'app de côté dans `.solutions/` et installe le squelette à sa place. Le corr
 teste **ce chemin-là**, pas une copie. À la sortie de l'atelier, le module est
 restauré. `python3 cours.py --restaurer` rattrape une sortie brutale.
 
-Le chapitre 4 reste théorique : Temporal n'est pas dans l'application. Son
-correcteur introspecte les décorateurs du SDK puis analyse l'arbre syntaxique de ta
-classe pour y traquer les appels non déterministes.
+**Les douze chapitres sont adossés à un module réel, sans exception.** Le
+correcteur du chapitre 4 introspecte les décorateurs du SDK Temporal puis analyse
+l'arbre syntaxique de ta classe pour y traquer les appels non déterministes, et
+ses tests exécutent de vrais workflows via `WorkflowEnvironment` — un serveur de
+test embarqué dans le SDK, qui ne télécharge rien.
 
 ## Vérification
 
@@ -144,6 +152,8 @@ leurs erreurs ; les appels ci-dessus ont été faits à la main, pas en CI.
 Le workflow GitHub Actions n'a jamais tourné sur un runner ; les versions
 d'actions viennent de leurs pages de releases.
 
-Temporal reste théorique — il n'est pas dans l'application. L'instrumentation
-Langfuse est câblée et son câblage est testé, mais aucun serveur Langfuse n'a
-reçu de trace. Le déploiement sur une infrastructure réelle reste à faire.
+Aucun serveur Langfuse n'a tourné : les tests prouvent que le SDK émet bien une
+requête avec le bon contenu, pas qu'une instance réelle l'accepte. L'auto-hébergement
+demande quatre services, c'est documenté dans [`docs/langfuse.md`](docs/langfuse.md).
+
+Le déploiement sur une infrastructure réelle reste à faire.

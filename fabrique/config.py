@@ -19,6 +19,10 @@ class Reglages(BaseSettings):
     max_essais_reparation: int = Field(default=2, ge=1, le=5)
     max_tours_correction: int = Field(default=3, ge=1, le=10)
 
+    temporal_host: str = ""
+    temporal_namespace: str = "default"
+    temporal_task_queue: str = "fabrique"
+
     ovh_api_key: str = ""
     ovh_base_url: str = "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1"
     ovh_modele: str = "Meta-Llama-3_3-70B-Instruct"

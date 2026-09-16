@@ -10,58 +10,57 @@ from modele import Chapitre, Kata, Question, Source
 # 4. Temporal : workflow deterministe reel
 # ═════════════════════════════════════════════════════════════════════════ #
 
-SQ4 = """
-# Atelier 4 — un vrai workflow Temporal (temporalio 1.33.0).
-# Pas besoin de serveur : le correcteur inspecte les decorateurs et le code.
+SQ4 = '''
+"""Workflow Temporal deterministe : le chemin automatique de la fabrique.
+
+Redaction -> controle -> correction -> redaction, borne a 3 tours, puis
+publication. Pas de validation humaine ici : c'est le role de LangGraph dans
+ce projet, Temporal orchestre le chemin automatique jusqu'a la publication.
+"""
+
+from __future__ import annotations
+
 from datetime import timedelta
 
-from temporalio import activity, workflow
+from temporalio import workflow
 from temporalio.common import RetryPolicy
 
+with workflow.unsafe.imports_passed_through():
+    from fabrique.temporal.activites import controler_page, generer_page, publier_page
 
-@activity.defn
-async def appeler_llm(prompt: str) -> str:
-    # Cote activity, tout est permis : reseau, horloge, aleatoire.
-    return "texte genere"
+TIMEOUT_GENERATION = timedelta(seconds=60)
+TIMEOUT_CONTROLE = timedelta(seconds=10)
+TIMEOUT_PUBLICATION = timedelta(seconds=30)
+
+RETRY_ACTIVITE = RetryPolicy(
+    initial_interval=timedelta(seconds=1),
+    backoff_coefficient=2.0,
+    maximum_attempts=3,
+)
 
 
 @workflow.defn
 class GenerationPage:
     @workflow.run
-    async def run(self, brief: str) -> str:
-        # A ECRIRE. Contraintes de determinisme :
+    async def run(self, brief: str, pages_existantes: list[str]) -> dict:
+        # A_ECRIRE. Contraintes de determinisme :
         #   - interdit : datetime.now(), time.time(), random.*, uuid.uuid4(),
         #     tout appel reseau direct, toute mutation d'etat global
-        #   - autorise : workflow.now(), workflow.random(), workflow.uuid4(),
-        #     workflow.logger, et l'appel d'activities
+        #   - autorise : workflow.now(), workflow.uuid4(), workflow.logger,
+        #     et l'appel d'activities
         #
         # Ton run doit :
-        #   1. horodater le depart avec l'API sure du SDK
-        #   2. appeler l'activity appeler_llm via workflow.execute_activity,
-        #      avec un start_to_close_timeout ET une RetryPolicy explicite
-        #   3. renvoyer le texte produit
+        #   1. horodater le demarrage avec l'API sure du SDK (workflow.now())
+        #   2. boucler au plus 3 fois : generer_page, puis controler_page ; si
+        #      des violations bloquantes restent et qu'il reste des tours,
+        #      reinjecter leur detail dans le prochain generer_page
+        #   3. chaque workflow.execute_activity doit avoir un
+        #      start_to_close_timeout ET une retry_policy explicite
+        #   4. sans violation bloquante, publier via publier_page avec une cle
+        #      d'idempotence tiree de workflow.uuid4() (jamais uuid.uuid4())
+        #   5. renvoyer un dict avec au moins "page", "violations", "publiee"
         raise NotImplementedError
-"""
-
-SOL4 = """
-@workflow.defn
-class GenerationPage:
-    @workflow.run
-    async def run(self, brief: str) -> str:
-        debut = workflow.now()
-        workflow.logger.info("demarrage")
-        texte = await workflow.execute_activity(
-            appeler_llm,
-            brief,
-            start_to_close_timeout=timedelta(seconds=30),
-            retry_policy=RetryPolicy(
-                initial_interval=timedelta(seconds=1),
-                backoff_coefficient=2.0,
-                maximum_attempts=3,
-            ),
-        )
-        return texte
-"""
+'''
 
 INTERDITS = {
     "datetime.now",
@@ -97,12 +96,10 @@ def _appels(noeud):
 def verif4(m):
     from temporalio import activity, workflow
 
-    res = []
-    act = ok(m, "appeler_llm")
-    cls = ok(m, "GenerationPage")
+    import fabrique.temporal.activites as activites
 
-    d_act = activity._Definition.from_callable(act)
-    res.append((d_act is not None, "appeler_llm est bien une activity Temporal"))
+    res = []
+    cls = ok(m, "GenerationPage")
 
     d_wf = workflow._Definition.from_class(cls)
     res.append((d_wf is not None, "GenerationPage est bien un workflow Temporal"))
@@ -113,15 +110,27 @@ def verif4(m):
         ),
     )
 
+    for nom_activite in ("generer_page", "controler_page", "publier_page"):
+        fn = ok(activites, nom_activite)
+        d_act = activity._Definition.from_callable(fn)
+        res.append((d_act is not None, f"{nom_activite} est bien une activity Temporal"))
+
     chemin = getattr(m, "__file__", None)
-    src = Path(chemin).read_text() if chemin else ""
+    src_fichier = Path(chemin).read_text() if chemin else ""
+    res.append(
+        (
+            "imports_passed_through" in src_fichier,
+            "les imports d'activities passent par workflow.unsafe.imports_passed_through()",
+        ),
+    )
+
     corps = None
-    for n in ast.walk(ast.parse(src)):
+    for n in ast.walk(ast.parse(src_fichier)):
         if isinstance(n, ast.ClassDef) and n.name == "GenerationPage":
             corps = n
     res.append((corps is not None, "la classe GenerationPage est bien dans ton fichier"))
     appels = _appels(corps) if corps is not None else []
-    src = ast.get_source_segment(src, corps) or "" if corps is not None else ""
+    src_corps = ast.get_source_segment(src_fichier, corps) or "" if corps is not None else ""
 
     fautifs = [a for a in appels if a in INTERDITS]
     res.append((not fautifs, f"aucun appel non deterministe dans le workflow ({fautifs})"))
@@ -133,12 +142,26 @@ def verif4(m):
     )
     res.append(
         (
-            any("execute_activity" in a for a in appels),
-            "l'activity est appelee via workflow.execute_activity",
+            any(a.endswith("workflow.uuid4") or a == "uuid4" for a in appels),
+            "la cle d'idempotence de publication vient de workflow.uuid4()",
         ),
     )
-    res.append(("RetryPolicy" in src, "une RetryPolicy explicite est passee"))
-    res.append(("start_to_close_timeout" in src, "un start_to_close_timeout est defini"))
+    nb_activites = sum(1 for a in appels if a.endswith("execute_activity"))
+    res.append(
+        (
+            nb_activites >= 3,
+            f"les trois activites sont appelees via workflow.execute_activity ({nb_activites}/3)",
+        ),
+    )
+    res.append(("RetryPolicy(" in src_fichier, "une RetryPolicy explicite est definie"))
+    nb_retry = src_corps.count("retry_policy=")
+    res.append(
+        (nb_retry >= 3, f"chaque appel d'activity recoit une retry_policy ({nb_retry}/3)"),
+    )
+    nb_timeout = src_corps.count("start_to_close_timeout")
+    res.append(
+        (nb_timeout >= 3, f"chaque appel d'activity a un start_to_close_timeout ({nb_timeout}/3)"),
+    )
     return res
 
 
@@ -265,17 +288,22 @@ workflow.now()                      # au lieu de datetime.now() ou time.time()""
         ),
     ],
     kata=Kata(
-        fichier="atelier_4.py",
-        consigne="Ecris le corps de GenerationPage.run avec la vraie API temporalio. Le "
-        "correcteur verifie les decorateurs par introspection du SDK, puis analyse "
-        "l'arbre syntaxique de ta classe pour y traquer les appels non "
-        "deterministes. Aucun serveur Temporal requis.",
+        module="fabrique.temporal.workflows",
+        consigne="Ecris le corps de GenerationPage.run avec la vraie API temporalio, "
+        "branche sur les vraies activities de fabrique.temporal.activites. Ce n'est "
+        "pas un exercice : pendant cet atelier, ton fichier REMPLACE le module de "
+        "l'app. Le correcteur verifie les decorateurs par introspection du SDK, puis "
+        "analyse l'arbre syntaxique de ta classe pour y traquer les appels non "
+        "deterministes. Aucun serveur Temporal requis pour ce correcteur (mais "
+        "tests/test_temporal.py, lui, en lance un vrai en local via "
+        "temporalio.testing.WorkflowEnvironment).",
         squelette=SQ4,
         verifier=verif4,
-        indice="workflow.now() pour l'horodatage. await workflow.execute_activity(fn, arg, "
-        "start_to_close_timeout=timedelta(seconds=30), retry_policy=RetryPolicy(...)). "
-        "RetryPolicy vient de temporalio.common.",
-        solution=SOL4,
+        indice="workflow.now() pour l'horodatage, workflow.uuid4() pour la cle "
+        "d'idempotence de publication. await workflow.execute_activity(fn, "
+        "args=[...], start_to_close_timeout=timedelta(...), "
+        "retry_policy=RetryPolicy(...)). RetryPolicy vient de temporalio.common. "
+        "Boucle bornee a 3 tours entre generer_page et controler_page.",
         dependances=["temporalio"],
     ),
     entretien=[
