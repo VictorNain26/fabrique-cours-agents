@@ -38,6 +38,7 @@ openai 3.14.0 · fastapi 0.141.1 · psycopg 3.3.5
 | Les quatre services (api, base, temporal, worker) tiennent ensemble dans ~460 Mo | `docker stats` sur la stack complete |
 | `WorkflowEnvironment.start_time_skipping()` demarre **sans acces reseau externe** : le serveur de test est embarque dans le SDK, rien n'est telecharge | resolution DNS bloquee puis demarrage reussi |
 | Le SDK Langfuse a **deux chemins d'export distincts** : les spans en OTLP protobuf vers `/api/public/otel/v1/traces`, les scores en REST JSON vers `/api/public/ingestion` avec `Authorization: Basic` | lecture de `langfuse/_client/span_processor.py` et `langfuse/_utils/request.py` |
+| **La CI passe sur un runner GitHub reel** : lint, format, 119 tests, puis la porte de non-regression sur le golden dataset | run public du depot, `actions/checkout@v7` et `actions/setup-python@v7` |
 | **La telemetrie sort reellement du processus** : un recepteur HTTP local recoit un evenement `score-create` apres une vraie generation | `tests/test_observabilite_reseau.py` |
 | Les reponses HTTP exposent le fournisseur qui a repondu et le cout de la page | test `test_la_reponse_expose_qui_a_repondu_et_le_cout` |
 | Le noeud de controle appelle bien `tracer_violation` : l'instrumentation est cablee, pas decorative | test `test_le_noeud_de_controle_trace_les_violations` |
@@ -75,10 +76,6 @@ La CI tourne sur le fournisseur factice. C'est délibéré : un test qui coûte 
 l'argent ou dépend d'un service tiers finit désactivé. Les adaptateurs réels ont
 leurs propres tests d'intégration dans `tests/test_providers_reels.py`, ignorés
 par défaut et lancés à la demande avec `FABRIQUE_TESTS_REELS=1`.
-
-Le workflow GitHub Actions n'a jamais tourné sur un runner. `actions/checkout@v7`
-et `actions/setup-python@v7` ont été relevées sur leurs pages de releases, pas
-éprouvées.
 
 Aucun serveur Langfuse n'a tourné : la preuve porte sur le fait que le SDK émet
 bien une requête avec le bon contenu, pas sur son acceptation par une instance

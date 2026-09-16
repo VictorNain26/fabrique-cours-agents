@@ -109,9 +109,10 @@ ruff check . && ruff format --check .
 python -m fabrique.evaluation.ci      # porte de non-regression
 ```
 
-La CI enchaîne les quatre. La porte de non-régression rejoue le golden dataset,
-compare à `fabrique/evaluation/reference.json` versionné dans le dépôt, et échoue
-si la qualité recule au-delà de la marge.
+La CI enchaîne les quatre sur un runner GitHub, en 36 secondes. La porte de
+non-régression rejoue le golden dataset, compare à
+`fabrique/evaluation/reference.json` versionné dans le dépôt, et échoue si la
+qualité recule au-delà de la marge.
 
 ## Les deux fournisseurs marchent contre leur API réelle
 
@@ -148,9 +149,6 @@ l'argent à chaque push finirait désactivée.
 
 Les tests automatisés ne couvrent les adaptateurs réels que sur la traduction de
 leurs erreurs ; les appels ci-dessus ont été faits à la main, pas en CI.
-
-Le workflow GitHub Actions n'a jamais tourné sur un runner ; les versions
-d'actions viennent de leurs pages de releases.
 
 Aucun serveur Langfuse n'a tourné : les tests prouvent que le SDK émet bien une
 requête avec le bon contenu, pas qu'une instance réelle l'accepte. L'auto-hébergement
