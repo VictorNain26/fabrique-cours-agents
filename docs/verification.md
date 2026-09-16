@@ -36,7 +36,9 @@ openai 3.14.0 · fastapi 0.141.1 · psycopg 3.3.5
 | Rejouer une validation deja consommee renvoie 409, un brief vide renvoie 422 | appels curl contre le conteneur |
 | Les reponses HTTP exposent le fournisseur qui a repondu et le cout de la page | test `test_la_reponse_expose_qui_a_repondu_et_le_cout` |
 | Le noeud de controle appelle bien `tracer_violation` : l'instrumentation est cablee, pas decorative | test `test_le_noeud_de_controle_trace_les_violations` |
-| **L'adaptateur Anthropic fonctionne contre l'API reelle** : appel abouti, reponse parsee, erreurs traduites vers la taxonomie. Couverture : `claude-sonnet-5`. Haiku 4.5, qui est le defaut, n'a pas ete appele | `scripts_valider_fournisseur.py anthropic` |
+| **Les deux fournisseurs reels produisent une Page qui passe les garde-fous**, via la boucle de reparation | `tests/test_providers_reels.py`, lances avec `FABRIQUE_TESTS_REELS=1` |
+| **Une cle invalide est classee `Fatale`, pas `Surcharge`** : le repli ne boucle donc pas sur une erreur definitive | meme fichier, appel reel avec une cle bidon |
+| **L'adaptateur Anthropic fonctionne contre l'API reelle** sur `claude-sonnet-5` et sur `claude-haiku-4-5`, le modele par defaut : appel abouti, reponse parsee, erreurs traduites vers la taxonomie | `scripts_valider_fournisseur.py anthropic` et `tests/test_providers_reels.py` |
 | **La boucle de reparation repare contre un vrai modele** : face a une `meta_description` hors bornes, l'erreur nommant le champ est renvoyee au modele et le second jet est conforme | execution avec `generer_valide(max_essais=3)` |
 | **L'adaptateur OVHcloud fonctionne contre l'API reelle** : `Meta-Llama-3_3-70B-Instruct` a repondu, 65 tokens entree / 546 sortie, Page valide au premier essai grace a `response_format` | `scripts_valider_fournisseur.py ovhcloud` avec une vraie cle |
 | **Le graphe complet tourne contre un vrai modele** : violation bloquante detectee, correction reinjectee, second jet conforme, interruption pour validation, publication unique apres approbation | execution du graphe avec `FournisseurAnthropic` |
@@ -62,14 +64,10 @@ citations.
 
 ## Limites de couverture
 
-Les tests automatisés et la CI tournent sur le fournisseur factice. C'est
-délibéré : un test ne doit ni coûter d'argent ni dépendre d'un service tiers. Les
-adaptateurs réels sont couverts par des tests sur la traduction de leurs erreurs,
-et vérifiés à la main contre leur API.
-
-Côté Anthropic, seul `claude-sonnet-5` a été appelé. Haiku 4.5 est le modèle par
-défaut — le moins cher, cohérent avec un projet dont le coût par page est une
-métrique — mais il n'a pas été exercé.
+La CI tourne sur le fournisseur factice. C'est délibéré : un test qui coûte de
+l'argent ou dépend d'un service tiers finit désactivé. Les adaptateurs réels ont
+leurs propres tests d'intégration dans `tests/test_providers_reels.py`, ignorés
+par défaut et lancés à la demande avec `FABRIQUE_TESTS_REELS=1`.
 
 Le workflow GitHub Actions n'a jamais tourné sur un runner. `actions/checkout@v7`
 et `actions/setup-python@v7` ont été relevées sur leurs pages de releases, pas
