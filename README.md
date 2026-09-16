@@ -58,7 +58,9 @@ chapitre 3.
 
 La rédaction passe par une **chaîne de fournisseurs** ordonnée du moins cher au
 plus cher : le premier qui répond gagne, on ne bascule que sur surcharge, et le
-nom de celui qui a réellement répondu est écrit dans l'état avec son coût.
+nom de celui qui a réellement répondu est écrit dans l'état avec le coût estimé
+de la page (la somme des enveloppes débitées) ; le coût réel de chaque appel est
+dans la trace Langfuse.
 Chaque essai débite d'abord une enveloppe de coût estimé du budget restant,
 avant même l'appel réseau — épuisée, l'API renvoie 402. `BUDGET_PAR_PAGE` est
 une enveloppe par page, cumulée sur tous les tours de correction. Un nom absent de
