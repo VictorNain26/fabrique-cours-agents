@@ -28,23 +28,41 @@ fait tourner l'application, les tests et la CI.
 
 Un brief entre, une page validée sort. Le fil qui relie tous les chapitres : le
 garde-fou **interdit les prix en dur**, donc le modèle doit émettre un
-`product_ref`, et le prix réel est résolu par un serveur MCP qui interroge le
-catalogue. Le chapitre 5 et le chapitre 6 cessent d'être deux exercices séparés.
+`product_ref`, jamais un prix, et le prix réel est résolu par un serveur MCP qui
+interroge le catalogue. Le chapitre 5 et le chapitre 6 cessent d'être deux
+exercices séparés.
 
 ```
-brief -> redaction -> controle -> [correction -> redaction]* -> validation humaine -> publication
-            |             |                                            |
-    chaine de repli   garde-fous                                  interrupt()
+brief -> redaction -> controle -> [correction -> redaction]* -> tarification -> [correction -> redaction]* -> validation humaine -> publication
+            |             |                          |                                     |
+    chaine de repli   garde-fous              client MCP catalogue                     interrupt()
 ```
+
+`tarification` résout, pour chaque `tableau_prix`, le prix réel via un client
+MCP connecté en mémoire au serveur du catalogue, et l'écrit dans
+`prix_affiche` — un champ retiré du schéma JSON envoyé au modèle
+(`SkipJsonSchema`) et systématiquement écrasé par le nœud, même si le modèle en
+a inventé un. Une référence absente du catalogue lève une violation bloquante
+`REF_PRODUIT_INCONNUE` et repart en correction ; un crash réel du catalogue,
+lui, remonte comme une erreur, pas comme une référence inconnue.
+
+Les retours de correction ne remplacent plus le tour précédent : ils
+s'accumulent dans l'état et sont compactés sous un budget de tokens
+(`BUDGET_TOKENS_INVITE`) avant chaque rédaction, par la fonction `compacter` du
+chapitre 3.
 
 La rédaction passe par une **chaîne de fournisseurs** ordonnée du moins cher au
 plus cher : le premier qui répond gagne, on ne bascule que sur surcharge, et le
-nom de celui qui a réellement répondu est écrit dans l'état avec son coût. Le
-budget par page est vérifié avant chaque essai — dépassé, l'API renvoie 402.
+nom de celui qui a réellement répondu est écrit dans l'état avec son coût.
+Chaque essai débite d'abord une enveloppe de coût estimé du budget restant,
+avant même l'appel réseau — épuisée, l'API renvoie 402. Un nom absent de
+`fake`, `ovhcloud`, `anthropic` dans `FOURNISSEURS` est rejeté au démarrage.
 
 ```
 FOURNISSEURS=ovhcloud,anthropic   # defaut : fake seul, aucun appel reseau
 BUDGET_PAR_PAGE=0.50
+COUT_ESTIME_OVHCLOUD=0.002        # euros, debite avant chaque essai OVHcloud
+COUT_ESTIME_ANTHROPIC=0.01        # euros, debite avant chaque essai Anthropic
 ```
 
 Les modèles par défaut sont les moins chers de chaque fournisseur — Llama 3.3 70B
@@ -64,6 +82,11 @@ Temporal du chapitre 4 (rédaction, contrôle, correction, publication, sans
 validation humaine) partage les mêmes garde-fous et le même catalogue, mais
 **aucune route ne le démarre** : il est exercé par `tests/test_temporal.py`, et le
 worker du compose n'exécute que ce qu'on lui soumet à la main.
+
+Les routes sont des fonctions `def` classiques, pas des coroutines : FastAPI
+les exécute dans son pool de threads plutôt que sur la boucle asyncio
+principale. C'est ce qui permet au nœud `tarification` d'appeler le client MCP
+avec `asyncio.run()` sans lever d'erreur pour boucle déjà active.
 
 | Route | Rôle |
 |---|---|
@@ -157,7 +180,8 @@ ruff check . && ruff format --check .
 python -m fabrique.evaluation.ci      # porte de non-regression
 ```
 
-La CI enchaîne les quatre sur un runner GitHub, en 36 secondes. La porte de
+La CI enchaîne les quatre sur un runner GitHub ; un run antérieur à ces
+changements a mesuré 36 secondes. La porte de
 non-régression rejoue le golden dataset, compare à
 `fabrique/evaluation/reference.json` versionné dans le dépôt, et échoue si la
 qualité recule au-delà de la marge. Une référence absente la fait échouer aussi ;
