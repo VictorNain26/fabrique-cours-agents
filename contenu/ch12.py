@@ -14,12 +14,17 @@ SQ12 = '''
 
 Rejoue le golden dataset avec le fournisseur factice, compare les scores a la
 reference versionnee dans le depot, et sort en erreur si la qualite recule.
+
+Une reference absente fait echouer la porte : sinon, un run qui l'ecrit lui-meme
+passe toujours. `--ecrire-reference` la (re)ecrit volontairement depuis ce run.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 
 from langgraph.checkpoint.memory import InMemorySaver
@@ -42,18 +47,21 @@ def tache(*, item, **_):
     raise NotImplementedError
 
 
-def main() -> int:
-    # 1. Rejoue CAS avec `tache` via lancer_local, recupere candidat["moyennes"].
-    # 2. Si REFERENCE n'existe pas encore : ecris-la (json indente, cles triees)
-    #    depuis ce run, affiche les moyennes, renvoie 0.
-    # 3. Sinon : charge la reference, affiche un tableau reference/candidat,
+def main(argv: Sequence[str] = ()) -> int:
+    # 1. Lis l'option --ecrire-reference dans argv avec argparse.
+    # 2. Sans l'option, si REFERENCE n'existe pas : affiche comment la creer
+    #    et renvoie 1, sans rien ecrire.
+    # 3. Rejoue CAS avec `tache` via lancer_local, recupere candidat["moyennes"].
+    # 4. Avec l'option : ecris REFERENCE (json indente, cles triees) depuis ce
+    #    run, affiche les moyennes, renvoie 0.
+    # 5. Sinon : charge la reference, affiche un tableau reference/candidat,
     #    appelle exiger_non_regression(reference, candidat, MARGE) -- elle leve
     #    RegressionError en cas de regression -- puis renvoie 0.
     raise NotImplementedError
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))
 '''
 
 
@@ -61,6 +69,8 @@ def verif12(m):
     import contextlib
     import io
     import json
+    import tempfile
+    from pathlib import Path
 
     tache = ok(m, "tache")
     main = ok(m, "main")
@@ -90,6 +100,22 @@ def verif12(m):
     with contextlib.redirect_stdout(tampon):
         code = main()
     res.append((code == 0, "main() renvoie 0 quand la reference correspond au run courant"))
+
+    if reference is not None:
+        with tempfile.TemporaryDirectory() as dossier:
+            absente = Path(dossier) / "reference.json"
+            m.REFERENCE = absente
+            try:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    code = main()
+            finally:
+                m.REFERENCE = reference
+            res.append(
+                (
+                    code != 0 and not absente.exists(),
+                    "sans reference, main() echoue au lieu de l'ecrire",
+                )
+            )
     return res
 
 
@@ -124,7 +150,9 @@ def tache(*, item, **_):
     etat = graphe.invoke({"brief": item["input"], "essais": 0}, config=...)
     return etat.get("page")
 
-def main() -> int:
+def main(argv: Sequence[str] = ()) -> int:
+    if "--ecrire-reference" not in argv and not REFERENCE.exists():
+        return 1
     candidat = {"moyennes": lancer_local(tache, CAS)["moyennes"]}
     exiger_non_regression(reference, candidat, MARGE)
     return 0"""),
@@ -132,7 +160,10 @@ def main() -> int:
             "`tache` rejoue le graphe LangGraph du chapitre 2 avec `FournisseurFake`, pas "
             "avec un vrai fournisseur : deterministe, gratuit, pas de reseau. `main` compare "
             "les moyennes obtenues a `reference.json`, et laisse `exiger_non_regression` "
-            "lever `RegressionError` si un score recule au dela de `MARGE`. Avec "
+            "lever `RegressionError` si un score recule au dela de `MARGE`. Une reference "
+            "absente fait echouer la porte : si `main` l'ecrivait elle-meme, une CI qui "
+            "la perdrait passerait toujours. La creer ou la remplacer est un geste "
+            "explicite, `python -m fabrique.evaluation.ci --ecrire-reference`. Avec "
             "MARGE=0.05, un ecart de -0.03 n'est ni une amelioration ni une regression : "
             '`verdict()` renvoie "indecis", et `exiger_non_regression` ne leve pas. '
             "Vouloir trancher sous la marge, sur un dataset de vingt a trente cas, est "
@@ -224,8 +255,9 @@ porte     python -m fabrique.evaluation.ci"""),
         'set(item["metadata"]["pages_existantes"]), checkpointer=InMemorySaver()), '
         'l\'invoque avec {"brief": item["input"], "essais": 0} et un thread_id egal '
         'a item["metadata"]["identifiant"], puis renvoie etat.get("page"). main '
-        "appelle lancer_local(tache, CAS) pour obtenir candidat, ecrit la reference "
-        "si elle est absente, sinon appelle exiger_non_regression(reference, "
+        "renvoie 1 si la reference est absente sans --ecrire-reference, appelle "
+        "lancer_local(tache, CAS) pour obtenir candidat, ecrit la reference si "
+        "l'option est passee, sinon appelle exiger_non_regression(reference, "
         "candidat, MARGE) et renvoie 0.",
         dependances=["langgraph", "langfuse"],
     ),

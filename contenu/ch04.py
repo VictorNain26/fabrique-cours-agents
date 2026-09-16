@@ -16,6 +16,9 @@ SQ4 = '''
 Redaction -> controle -> correction -> redaction, borne a 3 tours, puis
 publication. Pas de validation humaine ici : c'est le role de LangGraph dans
 ce projet, Temporal orchestre le chemin automatique jusqu'a la publication.
+
+Aucune route de l'API ne demarre ce workflow : il est exerce par
+tests/test_temporal.py et par soumission manuelle au worker.
 """
 
 from __future__ import annotations

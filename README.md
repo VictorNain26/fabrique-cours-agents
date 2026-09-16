@@ -59,9 +59,11 @@ curl localhost:8000/sante
 
 Quatre services, environ 460 Mo au total : l'API, Postgres, un **serveur Temporal
 auto-hébergé** (MIT, pas Temporal Cloud) et le worker qui exécute les workflows.
-LangGraph orchestre le chemin avec validation humaine, Temporal le chemin
-automatique et durable — les deux partagent les mêmes garde-fous et le même
-catalogue.
+L'API ne sert que le chemin LangGraph, avec validation humaine. Le workflow
+Temporal du chapitre 4 (rédaction, contrôle, correction, publication, sans
+validation humaine) partage les mêmes garde-fous et le même catalogue, mais
+**aucune route ne le démarre** : il est exercé par `tests/test_temporal.py`, et le
+worker du compose n'exécute que ce qu'on lui soumet à la main.
 
 | Route | Rôle |
 |---|---|
@@ -158,11 +160,14 @@ python -m fabrique.evaluation.ci      # porte de non-regression
 La CI enchaîne les quatre sur un runner GitHub, en 36 secondes. La porte de
 non-régression rejoue le golden dataset, compare à
 `fabrique/evaluation/reference.json` versionné dans le dépôt, et échoue si la
-qualité recule au-delà de la marge.
+qualité recule au-delà de la marge. Une référence absente la fait échouer aussi ;
+la créer ou la remplacer est un geste explicite,
+`python -m fabrique.evaluation.ci --ecrire-reference`, dont le diff se relit en
+revue.
 
 ## Les deux fournisseurs marchent contre leur API réelle
 
-Pas seulement écrits contre la documentation : exécutés.
+Pas seulement écrits contre la documentation : exécutés à la main, hors CI.
 
 **OVHcloud AI Endpoints** (`Meta-Llama-3_3-70B-Instruct`) rend une `Page` valide
 au premier essai grâce à `response_format`. **Anthropic** (`claude-sonnet-5`)
@@ -171,8 +176,10 @@ du schéma, l'erreur nommant le champ lui repart et le second jet passe ; quand 
 viole un garde-fou, la correction est réinjectée puis le graphe s'interrompt pour
 la validation humaine et ne publie qu'une fois.
 
-Haiku 4.5 est le modèle par défaut mais n'a pas été appelé : son tarif ci-dessous
-est une projection, celui d'OVHcloud une mesure.
+Haiku 4.5 est le modèle Anthropic par défaut, mais aucun appel à Haiku n'est
+consigné : `tests/test_providers_reels.py` le cible, sans exécution enregistrée.
+Son coût ci-dessous est une projection à partir du tarif publié ; celui d'OVHcloud
+s'appuie sur les tokens d'un appel réel.
 
 Le détail, avec un niveau de preuve par affirmation, est dans
 [`docs/verification.md`](docs/verification.md).
@@ -189,12 +196,19 @@ tokens**, entrée et sortie ; Haiku 4.5 est à 1 $/M en entrée et 5 $/M en sort
 
 **Les tests et la CI ne coûtent rien** : ils tournent sur le fournisseur factice,
 zéro appel réseau. C'est délibéré — une porte de non-régression qui coûterait de
-l'argent à chaque push finirait désactivée.
+l'argent à chaque push finirait désactivée. La contrepartie : la porte de
+non-régression protège la plomberie (graphe, garde-fous, boucle de réparation,
+évaluateurs), **pas la qualité d'un vrai modèle**. Un changement de prompt ou de
+modèle qui dégrade les pages réelles ne la fait pas échouer.
 
 ## Ce qui n'est pas couvert
 
 Les tests automatisés ne couvrent les adaptateurs réels que sur la traduction de
-leurs erreurs ; les appels ci-dessus ont été faits à la main, pas en CI.
+leurs erreurs ; les appels ci-dessus ont été faits à la main, pas en CI. Les tests
+d'intégration de `tests/test_providers_reels.py` sont ignorés par défaut.
+
+Temporal n'est branché sur aucune route de l'API : le workflow n'est exercé que
+par les tests et par soumission manuelle au worker.
 
 Le chemin Temporal n'ouvre pas de trace de page : ses générations arrivent en
 traces isolées, et le service `worker` du compose ne reçoit pas les clés

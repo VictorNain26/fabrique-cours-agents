@@ -2,12 +2,17 @@
 
 Rejoue le golden dataset avec le fournisseur factice, compare les scores a la
 reference versionnee dans le depot, et sort en erreur si la qualite recule.
+
+Une reference absente fait echouer la porte : sinon, un run qui l'ecrit lui-meme
+passe toujours. `--ecrire-reference` la (re)ecrit volontairement depuis ce run.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 
 from langgraph.checkpoint.memory import InMemorySaver
@@ -32,12 +37,25 @@ def tache(*, item, **_):
     return etat.get("page")
 
 
-def main() -> int:
+def main(argv: Sequence[str] = ()) -> int:
+    parser = argparse.ArgumentParser(prog="python -m fabrique.evaluation.ci")
+    parser.add_argument(
+        "--ecrire-reference",
+        action="store_true",
+        help="ecrit reference.json depuis ce run au lieu de comparer",
+    )
+    ecrire = parser.parse_args(list(argv)).ecrire_reference
+
+    if not ecrire and not REFERENCE.exists():
+        print(f"reference absente : {REFERENCE}")
+        print("cree-la avec python -m fabrique.evaluation.ci --ecrire-reference")
+        return 1
+
     candidat = {"moyennes": lancer_local(tache, CAS)["moyennes"]}
 
-    if not REFERENCE.exists():
+    if ecrire:
         REFERENCE.write_text(json.dumps(candidat, indent=2, sort_keys=True) + "\n")
-        print(f"reference absente, ecrite depuis ce run : {REFERENCE.name}")
+        print(f"reference ecrite depuis ce run : {REFERENCE.name}")
         for nom, valeur in sorted(candidat["moyennes"].items()):
             print(f"  {nom:<28} {valeur:.3f}")
         return 0
@@ -56,4 +74,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))
