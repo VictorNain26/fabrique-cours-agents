@@ -1,5 +1,7 @@
 # Versions de reference, relevees par `pip list` dans le venv du projet le 15/09/2026.
 pydantic==2.13.5
+# Importe directement par providers/fake.py pour lire les contraintes d un schema.
+annotated-types==0.8.0
 pydantic-settings==2.15.0
 langgraph==1.2.11
 langgraph-checkpoint-postgres==3.1.2
