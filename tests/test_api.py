@@ -101,7 +101,7 @@ def test_la_reponse_expose_qui_a_repondu_et_le_cout(client: TestClient) -> None:
     assert relu["fournisseur"] == "fake"
 
 
-def test_une_page_avec_tableau_de_prix_passe_par_mcp_via_l_api(client, monkeypatch) -> None:
+def test_une_page_avec_tableau_de_prix_passe_par_mcp_via_l_api(client) -> None:
     import json
 
     from fabrique.providers.fake import FournisseurFake

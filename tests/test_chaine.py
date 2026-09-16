@@ -12,6 +12,7 @@ from fabrique.providers.ovhcloud import FournisseurOVHcloud
 
 def test_la_chaine_suit_l_ordre_declare_et_porte_l_enveloppe() -> None:
     parametres = Reglages(
+        _env_file=None,
         fournisseurs="ovhcloud,anthropic,fake",
         ovh_api_key="k",
         anthropic_api_key="k",
@@ -28,7 +29,13 @@ def test_la_chaine_suit_l_ordre_declare_et_porte_l_enveloppe() -> None:
 
 def test_un_nom_inconnu_est_refuse_a_la_frontiere() -> None:
     with pytest.raises(ValidationError, match="ovhclou"):
-        Reglages(fournisseurs="ovhclou")
+        Reglages(_env_file=None, fournisseurs="ovhclou")
+
+
+@pytest.mark.parametrize("valeur", ["", ",", " , "])
+def test_une_chaine_vide_est_refusee_a_la_frontiere(valeur: str) -> None:
+    with pytest.raises(ValidationError, match="aucun fournisseur"):
+        Reglages(_env_file=None, fournisseurs=valeur)
 
 
 def test_le_budget_par_defaut_couvre_plusieurs_essais() -> None:

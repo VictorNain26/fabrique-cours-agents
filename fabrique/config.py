@@ -31,7 +31,10 @@ class Reglages(BaseSettings):
     @field_validator("fournisseurs")
     @classmethod
     def _noms_connus(cls, valeur: str) -> str:
-        inconnus = {n.strip() for n in valeur.split(",") if n.strip()} - FOURNISSEURS_CONNUS
+        noms = {n.strip() for n in valeur.split(",") if n.strip()}
+        if not noms:
+            raise ValueError("aucun fournisseur dans FOURNISSEURS (ex. : fake)")
+        inconnus = noms - FOURNISSEURS_CONNUS
         if inconnus:
             raise ValueError(f"fournisseurs inconnus : {sorted(inconnus)}")
         return valeur
