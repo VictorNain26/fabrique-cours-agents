@@ -28,6 +28,8 @@ openai 3.14.0 · fastapi 0.141.1 · psycopg 3.3.5
 | `trim_messages` a bien 9 paramètres, dans l'ordre annoncé | `inspect.signature` |
 | `langfuse` 4 expose `run_experiment`, `Evaluation`, `RegressionError`, `observe(as_type=...)` avec `guardrail` et `evaluator` | introspection du client |
 | Sans clés, le client Langfuse se désactive et ne lève pas | exécution sans variables d'environnement |
+| **Des variables `LANGFUSE_*` présentes mais vides ne désactivent pas le SDK** : il ouvre un tracer et tente d'exporter. D'où le garde `actif()` avant tout appel | exécution avec `LANGFUSE_PUBLIC_KEY=` puis lecture de `Langfuse.__init__` (test `is None`) |
+| Une page donne une seule trace (`create_trace_id(seed=thread_id)`), avec un span par nœud, un span par essai de repli et une `generation` par appel fournisseur portant modèle, tokens et coût | `tests/test_observabilite_generations.py`, spans lus dans un `InMemorySpanExporter` |
 | `PostgresSaver` a bien `.from_conn_string()` et `.setup()` | introspection |
 | En openai 3.14, `chat.completions.parse` existe hors beta | `hasattr` sur le client |
 | L'image se construit et le conteneur passe son healthcheck en tournant non-root | `docker build` puis `docker run`, healthcheck observe `healthy` |
