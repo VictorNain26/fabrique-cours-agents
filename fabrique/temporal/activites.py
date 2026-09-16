@@ -18,14 +18,14 @@ SYSTEME = "Tu generes une page web au format JSON strict conforme au schema four
 
 
 @activity.defn
-async def generer_page(brief: str, retour: str | None) -> str:
+async def generer_page(brief: str, retour: str | None, deja_depense: float) -> dict:
     parametres = reglages()
     fournisseurs = chaine_depuis_reglages(parametres)
     invite = brief if retour is None else f"{brief}\n\n{retour}"
 
     resultat = executer(
         fournisseurs,
-        parametres.budget_par_page,
+        parametres.budget_par_page - deja_depense,
         lambda f: generer_valide(
             f,
             invite=invite,
@@ -38,7 +38,8 @@ async def generer_page(brief: str, retour: str | None) -> str:
     # Ce chemin n'a pas de noeud de tarification : un prix fourni par le modele
     # serait publie tel quel.
     blocs = [bloc.model_copy(update={"prix_affiche": None}) for bloc in page.blocs]
-    return page.model_copy(update={"blocs": blocs}).model_dump_json()
+    page_json = page.model_copy(update={"blocs": blocs}).model_dump_json()
+    return {"page": page_json, "cout": resultat.cout}
 
 
 @activity.defn
