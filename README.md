@@ -48,7 +48,8 @@ MCP connecté en mémoire au serveur du catalogue, et l'écrit dans
 (`SkipJsonSchema`) et systématiquement écrasé par le nœud, même si le modèle en
 a inventé un. Une référence absente du catalogue lève une violation bloquante
 `REF_PRODUIT_INCONNUE` et repart en correction ; un crash réel du catalogue,
-lui, remonte comme une erreur, pas comme une référence inconnue.
+lui, remonte comme une erreur `CatalogueIndisponible` (503 JSON côté API), pas
+comme une référence inconnue.
 
 Les retours de correction ne remplacent plus le tour précédent : ils
 s'accumulent dans l'état et sont compactés sous un budget de tokens

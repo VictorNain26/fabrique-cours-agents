@@ -115,15 +115,15 @@ async def test_une_reference_inconnue_est_une_erreur_d_outil_nommee(serveur):
     assert "inexistant" in resultat.content[0].text
 
 
-def test_le_client_leve_runtimeerror_en_cas_de_crash_catalogue(monkeypatch):
-    from fabrique.mcp_catalogue.client import resoudre_prix
+def test_le_client_signale_un_catalogue_indisponible_en_cas_de_crash(monkeypatch):
+    from fabrique.mcp_catalogue.client import CatalogueIndisponible, resoudre_prix
 
     monkeypatch.setattr(
         "fabrique.mcp_catalogue.catalogue.get",
         lambda _: (_ for _ in ()).throw(ValueError("crash test")),
     )
 
-    with pytest.raises(RuntimeError) as erreur:
+    with pytest.raises(CatalogueIndisponible) as erreur:
         resoudre_prix("vps-comfort")
 
     assert MESSAGE_REFERENCE_INCONNUE not in str(erreur.value)

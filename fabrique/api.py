@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 from fabrique.config import reglages
 from fabrique.generation.graphe import construire
 from fabrique.generation.reprise import en_attente, reprendre
+from fabrique.mcp_catalogue.client import CatalogueIndisponible
 from fabrique.modeles import Page, Violation
 from fabrique.providers.base import (
     BudgetDepasse,
@@ -96,6 +97,13 @@ async def _gerer_budget_depasse(request: Request, exc: BudgetDepasse) -> JSONRes
 @app.exception_handler(Surcharge)
 async def _gerer_surcharge(request: Request, exc: Surcharge) -> JSONResponse:
     return JSONResponse(status_code=503, content={"detail": str(exc)})
+
+
+@app.exception_handler(CatalogueIndisponible)
+async def _gerer_catalogue_indisponible(
+    request: Request, exc: CatalogueIndisponible
+) -> JSONResponse:
+    return JSONResponse(status_code=503, content={"detail": f"catalogue indisponible : {exc}"})
 
 
 @app.exception_handler(SortieInvalide)

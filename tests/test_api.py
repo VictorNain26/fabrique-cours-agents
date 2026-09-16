@@ -176,3 +176,33 @@ def test_un_budget_epuise_sur_plusieurs_tours_renvoie_402(client: TestClient) ->
 
     assert reponse.status_code == 402
     assert "budget" in reponse.json()["detail"]
+
+
+def test_un_catalogue_en_panne_renvoie_un_503_json(client: TestClient, monkeypatch) -> None:
+    import json
+
+    from fabrique.providers.fake import FournisseurFake
+
+    def en_panne(_reference):
+        raise ValueError("catalogue en panne")
+
+    monkeypatch.setattr("fabrique.mcp_catalogue.catalogue.get", en_panne)
+    page = json.dumps(
+        {
+            "titre_h1": "VPS",
+            "meta_description": "d" * 130,
+            "blocs": [
+                {"type": "titre", "contenu": "VPS"},
+                {"type": "tableau_prix", "contenu": "Offres", "product_ref": "vps-pro"},
+            ],
+            "liens": [],
+        }
+    )
+    client.app.state.fournisseurs = [FournisseurFake(reponses=[page])]
+    sans_relance = TestClient(client.app, raise_server_exceptions=False)
+
+    reponse = sans_relance.post("/pages", json={"brief": "b"})
+
+    assert reponse.status_code == 503
+    assert reponse.headers["content-type"] == "application/json"
+    assert reponse.json()["detail"]

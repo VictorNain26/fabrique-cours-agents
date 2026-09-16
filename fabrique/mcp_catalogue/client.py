@@ -19,6 +19,10 @@ from mcp import Client
 from fabrique.mcp_catalogue.serveur import MESSAGE_REFERENCE_INCONNUE, PrixResolu, construire
 
 
+class CatalogueIndisponible(Exception):
+    """Le catalogue a plante : ce n'est pas une reference inconnue."""
+
+
 async def _resoudre(reference: str) -> PrixResolu | None:
     async with Client(construire()) as client:
         resultat = await client.call_tool("resoudre_prix", {"reference": reference})
@@ -26,7 +30,7 @@ async def _resoudre(reference: str) -> PrixResolu | None:
         error_text = resultat.content[0].text
         if MESSAGE_REFERENCE_INCONNUE in error_text:
             return None
-        raise RuntimeError(error_text)
+        raise CatalogueIndisponible(error_text)
     return PrixResolu.model_validate(resultat.structured_content)
 
 
