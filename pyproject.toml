@@ -15,4 +15,7 @@ ignore = ["E501"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Sans ca, un `pytest` nu ne trouve pas le paquet : seul `python -m pytest`
+# insere le repertoire courant dans sys.path. La CI lance la forme nue.
+pythonpath = ["."]
 asyncio_mode = "auto"
