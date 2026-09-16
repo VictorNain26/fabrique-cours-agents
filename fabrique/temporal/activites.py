@@ -7,42 +7,20 @@ from __future__ import annotations
 
 from temporalio import activity
 
-from fabrique.config import Reglages, reglages
+from fabrique.config import reglages
 from fabrique.garde_fous.validateur import valider
 from fabrique.generation.reparation import generer_valide
 from fabrique.modeles import Page
-from fabrique.providers.anthropic import FournisseurAnthropic
-from fabrique.providers.base import Fournisseur
-from fabrique.providers.fake import FournisseurFake
-from fabrique.providers.ovhcloud import FournisseurOVHcloud
+from fabrique.providers.chaine import chaine_depuis_reglages
 from fabrique.providers.repli import executer
 
 SYSTEME = "Tu generes une page web au format JSON strict conforme au schema fourni."
 
 
-def _un_fournisseur(nom: str, parametres: Reglages) -> Fournisseur:
-    if nom == "ovhcloud":
-        return FournisseurOVHcloud(
-            api_key=parametres.ovh_api_key,
-            base_url=parametres.ovh_base_url,
-            modele=parametres.ovh_modele,
-        )
-    if nom == "anthropic":
-        return FournisseurAnthropic(
-            api_key=parametres.anthropic_api_key,
-            modele=parametres.anthropic_modele,
-        )
-    return FournisseurFake()
-
-
-def _chaine_depuis_reglages(parametres: Reglages) -> list[Fournisseur]:
-    return [_un_fournisseur(nom, parametres) for nom in parametres.chaine]
-
-
 @activity.defn
 async def generer_page(brief: str, retour: str | None) -> str:
     parametres = reglages()
-    fournisseurs = _chaine_depuis_reglages(parametres)
+    fournisseurs = chaine_depuis_reglages(parametres)
     invite = brief if retour is None else f"{brief}\n\n{retour}"
 
     resultat = executer(

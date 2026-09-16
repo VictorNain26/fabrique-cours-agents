@@ -44,7 +44,7 @@ def main() -> int:
             print("anthropic_api_key absente : renseigne ANTHROPIC_API_KEY dans .env")
             return 1
         print(f"cle ANTHROPIC_API_KEY : {_masque(cle)}")
-        fournisseur = FournisseurAnthropic(api_key=cle)
+        fournisseur = FournisseurAnthropic(api_key=cle, modele=reglages().anthropic_modele)
     else:
         print(f"fournisseur inconnu : {nom}")
         return 1

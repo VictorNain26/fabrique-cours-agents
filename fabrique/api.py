@@ -16,20 +16,17 @@ from langgraph.checkpoint.postgres import PostgresSaver
 from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, Field
 
-from fabrique.config import Reglages, reglages
+from fabrique.config import reglages
 from fabrique.generation.graphe import construire
 from fabrique.generation.reprise import en_attente, reprendre
 from fabrique.modeles import Page, Violation
-from fabrique.providers.anthropic import FournisseurAnthropic
 from fabrique.providers.base import (
     BudgetDepasse,
     Fatale,
-    Fournisseur,
     SortieInvalide,
     Surcharge,
 )
-from fabrique.providers.fake import FournisseurFake
-from fabrique.providers.ovhcloud import FournisseurOVHcloud
+from fabrique.providers.chaine import chaine_depuis_reglages
 
 
 class SanteReponse(BaseModel):
@@ -73,25 +70,6 @@ class ValidationReponse(BaseModel):
     identifiant_publication: str | None
 
 
-def _un_fournisseur(nom: str, parametres: Reglages) -> Fournisseur:
-    if nom == "ovhcloud":
-        return FournisseurOVHcloud(
-            api_key=parametres.ovh_api_key,
-            base_url=parametres.ovh_base_url,
-            modele=parametres.ovh_modele,
-        )
-    if nom == "anthropic":
-        return FournisseurAnthropic(
-            api_key=parametres.anthropic_api_key,
-            modele=parametres.anthropic_modele,
-        )
-    return FournisseurFake()
-
-
-def _chaine_depuis_reglages(parametres: Reglages) -> list[Fournisseur]:
-    return [_un_fournisseur(nom, parametres) for nom in parametres.chaine]
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     parametres = reglages()
@@ -103,7 +81,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             checkpointer = InMemorySaver()
 
         app.state.checkpointer = checkpointer
-        app.state.fournisseurs = _chaine_depuis_reglages(parametres)
+        app.state.fournisseurs = chaine_depuis_reglages(parametres)
         yield
 
 
