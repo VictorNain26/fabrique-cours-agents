@@ -155,8 +155,7 @@ def get_produit(reference: str) -> str:
         ),
         A(
             "Un serveur MCP tiers injecte du texte dans ton contexte. C'est une surface "
-            "d'injection de prompt et d'exfiltration. Chez un hebergeur, mentionner ce risque "
-            "sans qu'on te le demande vaut tres cher."
+            "d'injection de prompt et d'exfiltration, a traiter comme telle des la conception."
         ),
         H("L'enveloppe result"),
         T(
@@ -229,10 +228,10 @@ get_produit(...) -> Produit | None       =>  {"result": {...}}  ou  {"result": N
         "reference est inconnue au catalogue.",
         dependances=["mcp"],
     ),
-    entretien=[
-        "Montre une bonne et une mauvaise description d'outil, explique l'ecart.",
-        "Cite un risque de securite propre aux serveurs MCP tiers.",
-        "Dis ou en est la specification et ce qu'a change la derniere revision.",
+    a_retenir=[
+        "La difference entre une bonne et une mauvaise description d'outil.",
+        "Un risque de securite propre aux serveurs MCP tiers.",
+        "Ou en est la specification MCP et ce qu'a change la derniere revision.",
     ],
     sources=[
         Source("execute", "mcp 2.2.0 : MCPServer, list_tools, call_tool, schema genere"),

@@ -74,8 +74,8 @@ CH3 = Chapitre(
     duree_min=25,
     blocs=[
         T(
-            "Le client cite explicitement la gestion du contexte dans son mail. C'est ce qui "
-            "separe un demonstrateur d'un agent qui tient douze etapes."
+            "La gestion du contexte est ce qui separe un demonstrateur d'un agent qui tient "
+            "douze etapes."
         ),
         H("Quatre leviers, dans cet ordre"),
         T(
@@ -84,10 +84,7 @@ CH3 = Chapitre(
             "des references plutot que des valeurs. Trois. Compacter. Quatre. Isoler dans un "
             "sous-agent qui a son propre contexte et ne rend que sa conclusion."
         ),
-        A(
-            "Cet ordre de priorite est ma position, pas une citation. Presente-le comme ton "
-            "experience, pas comme une regle officielle."
-        ),
+        A("Cet ordre de priorite est ma position, pas une citation, pas une regle officielle."),
         H("L'outil existe deja dans la stack"),
         T(
             "langchain-core fournit trim_messages, qui fait le travail standard. Signature "
@@ -102,7 +99,7 @@ trim_messages(msgs, max_tokens=3, token_counter=len,
 # execute dans le venv -> [SystemMessage:regles, HumanMessage:m3, HumanMessage:m4]"""),
         T(
             "Tu vas reimplementer ce mecanisme a la main dans l'atelier. Pas pour remplacer "
-            "la lib, mais parce qu'en entretien on te demandera la strategie, pas le nom de "
+            "la lib, mais parce que ce qui compte c'est la strategie, pas le nom de "
             "la fonction. Et parce que sur une chaine de generation de pages, tes unites ne "
             "sont pas des messages de chat mais des sections, des briefs et des resultats "
             "d'outils : tu ecriras ta propre version."
@@ -154,7 +151,7 @@ trim_messages(msgs, max_tokens=3, token_counter=len,
         "partant de la fin avec reversed(). Verifie que le resume lui-meme rentre.",
         dependances=[],
     ),
-    entretien=[
+    a_retenir=[
         "Comment tu tiens un workflow a douze etapes sans que le contexte explose.",
         "Pourquoi une fenetre plus grande n'est pas une solution.",
     ],

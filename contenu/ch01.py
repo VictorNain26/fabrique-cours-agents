@@ -122,7 +122,7 @@ CH1 = Chapitre(
     blocs=[
         T(
             "Version installee dans le venv du cours : pydantic 2.13.5. C'est la version "
-            "de la famille Pydantic v2 demandee dans l'offre."
+            "de la famille Pydantic v2 utilisee dans tout le cours."
         ),
         H("Le contrat"),
         C("""from typing import Literal
@@ -162,7 +162,7 @@ except ValidationError as e:
             "dans du texte libre, detourner le tool calling en declarant un outil dont les "
             "arguments sont ton schema, ou utiliser les sorties structurees natives ou le "
             "fournisseur contraint la generation. Les garanties montent dans cet ordre. "
-            "Sache dire laquelle tu utilises et pourquoi."
+            "Identifie laquelle tu utilises et pourquoi, pour chaque appel que tu ecris."
         ),
         A(
             "Aucune des trois ne garantit que le contenu est juste. Un JSON parfaitement "
@@ -201,7 +201,7 @@ except ValidationError as e:
             bonne=1,
             explication="Position d'auteur, pas une citation : c'est un constat de "
             "praticien largement partage, mais ce n'est pas un chiffre "
-            "documente. Presente-le comme ton experience.",
+            "documente.",
             source="auteur",
         ),
     ],
@@ -219,7 +219,7 @@ except ValidationError as e:
         "derniere_erreur pour garder la cause.",
         dependances=["pydantic"],
     ),
-    entretien=[
+    a_retenir=[
         "Quelle technique de sortie structuree tu utilises et quelles garanties elle donne.",
         "Comment tu bornes une boucle de reparation et ce que tu fais au dernier essai rate.",
     ],

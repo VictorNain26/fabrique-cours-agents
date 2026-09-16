@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Cours interactif — Agents IA en production.
-Préparation mission AI Website Factory (OVHcloud).
+Chaque atelier ecrit un vrai module de l'application livree avec le cours.
 
 Usage :
     python3 cours.py            menu principal
@@ -407,12 +407,12 @@ def jouer_chapitre(ch: Chapitre, prog: dict) -> None:
     jouer_quiz(ch, prog)
     jouer_kata(ch, prog)
     afficher_sources(ch)
-    if ch.entretien:
+    if ch.a_retenir:
         print()
         print(ligne())
-        print(gras("  À savoir raconter en entretien"))
+        print(gras("  Ce que tu dois savoir expliquer"))
         print(ligne())
-        for q in ch.entretien:
+        for q in ch.a_retenir:
             print()
             paragraphe("• " + q, indent="  ")
         print()

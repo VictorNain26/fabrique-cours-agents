@@ -122,12 +122,12 @@ CH5 = Chapitre(
     duree_min=25,
     blocs=[
         T(
-            "L'annonce dit mot pour mot : vous aimez transformer un comportement incertain "
-            "en regles, tests et metriques. Ce chapitre repond a cette phrase."
+            "Transformer un comportement incertain en regles, tests et metriques : c'est "
+            "l'objet de ce chapitre."
         ),
         A(
             "Tout ce chapitre est de l'artisanat, pas de la doc. Il n'y a pas de "
-            "specification officielle du bon garde-fou. Presente-le comme ta methode."
+            "specification officielle du bon garde-fou. C'est une methode, pas une norme."
         ),
         H("La grille de decision"),
         C("""Le controle est...                        Alors
@@ -189,9 +189,9 @@ subjectif sans attendu                    LLM-as-judge, avec ses limites"""),
         r"'4 vCores'.",
         dependances=["pydantic"],
     ),
-    entretien=[
-        "Recite la grille regle / outil / dataset / juge.",
-        "Explique pourquoi tu ecris le validateur avant le prompt.",
+    a_retenir=[
+        "La grille regle / outil / dataset / juge, et quand utiliser laquelle.",
+        "Pourquoi le validateur s'ecrit avant le prompt.",
     ],
     sources=[
         Source("auteur", "La grille de decision et le format de Violation"),

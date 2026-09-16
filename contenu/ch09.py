@@ -269,10 +269,10 @@ def noeud_publication(etat: EtatPage) -> dict:
         "'commentaire': commentaire}), config=config).",
         dependances=["langgraph", "pydantic"],
     ),
-    entretien=[
-        "Explique pourquoi un noeud avec interrupt() est rejoue depuis le debut, et ce "
-        "que ca t'interdit d'y mettre.",
-        "Donne un exemple metier ou ignorer cette regle produit un doublon silencieux.",
+    a_retenir=[
+        "Pourquoi un noeud avec interrupt() est rejoue depuis le debut, et ce que ca "
+        "interdit d'y mettre.",
+        "Un exemple metier ou ignorer cette regle produit un doublon silencieux.",
         "Ou vit exactement l'effet de bord de publication dans le graphe de la fabrique, "
         "et pourquoi la a cet endroit.",
     ],

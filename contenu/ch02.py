@@ -308,10 +308,10 @@ class Etat(TypedDict):
         "interrupt() exige un checkpointer et un thread_id dans config.",
         dependances=["langgraph", "pydantic"],
     ),
-    entretien=[
-        "Explique LangGraph en trois phrases sans citer une fonction de son API.",
-        "Dis dans quel cas tu ne le mettrais pas.",
-        "Explique pourquoi un noeud doit etre idempotent.",
+    a_retenir=[
+        "LangGraph en trois phrases sans citer une fonction de son API.",
+        "Dans quel cas ne pas l'utiliser.",
+        "Pourquoi un noeud doit etre idempotent.",
     ],
     sources=[
         Source(

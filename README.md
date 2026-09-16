@@ -5,7 +5,8 @@ tourne. À la fin des douze chapitres, tu n'as pas douze fichiers d'exercice : t
 un service de génération de pages web sous garde-fous, avec validation humaine,
 persistance, observabilité et une porte de non-régression en intégration continue.
 
-Préparation entretien AI Website Factory (OVHcloud).
+Un cours pour apprendre à construire des agents IA qui tiennent en production,
+dont les ateliers écrivent les modules d'une application réelle.
 
 ## Démarrer
 

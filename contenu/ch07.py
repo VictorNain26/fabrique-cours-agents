@@ -197,9 +197,8 @@ CH7 = Chapitre(
     duree_min=30,
     blocs=[
         T(
-            "Axe deux de la mission, ecrit noir sur blanc : une evolution d'agent ne doit pas "
-            "simplement avoir l'air meilleure, on doit pouvoir le mesurer. Tu as deja un "
-            "dataset golden sur TomIA, donc tu pars avec de l'avance."
+            "Une evolution d'agent ne doit pas simplement avoir l'air meilleure : il faut "
+            "pouvoir le mesurer. C'est l'objet de ce chapitre."
         ),
         H("Ce que Langfuse 4 fait deja pour toi"),
         T(
@@ -269,7 +268,7 @@ derive                un juge non fige rend deux runs incomparables"""),
         A(
             "Ces quatre biais sont documentes dans la litterature sur l'evaluation par "
             "modele, mais je ne les ai pas reverifies contre un papier precis en preparant ce "
-            "cours. Annonce-les comme connus, pas comme cites."
+            "cours. Ce sont des connaissances de praticien, pas des citations."
         ),
         T(
             "La parade tient en une phrase : un juge se calibre contre des annotations "
@@ -334,10 +333,10 @@ derive                un juge non fige rend deux runs incomparables"""),
         "RegressionError.",
         dependances=["langfuse", "pydantic"],
     ),
-    entretien=[
+    a_retenir=[
         "Ce que Langfuse 4 fait deja pour toi, et ce que tu ecris quand meme toi-meme.",
-        "Comment tu construis un golden dataset sans verite terrain.",
-        "Cite trois biais du LLM-as-judge et la parade.",
+        "Comment construire un golden dataset sans verite terrain.",
+        "Trois biais du LLM-as-judge et la parade pour chacun.",
     ],
     sources=[
         Source(

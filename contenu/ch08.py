@@ -186,7 +186,8 @@ Timeout               re-essai si l'appel est idempotent, sinon echec
 Fatale (cle, refus)   aucun re-essai, alerte immediate"""),
         A(
             "Cette taxonomie est la mienne. Elle n'est pas tiree d'une doc, elle vient du "
-            "recoupement des codes d'erreur des fournisseurs. Presente-la comme ta grille."
+            "recoupement des codes d'erreur des fournisseurs. C'est une grille de praticien, "
+            "pas une norme."
         ),
         H("Ce que la plateforme fait deja pour toi"),
         T(
@@ -273,10 +274,10 @@ BUDGET_PAR_PAGE=0.50              # depasse -> l'API renvoie 402"""
         "Fatale. Debite fournisseur.cout_par_appel avant l'appel.",
         dependances=["pydantic"],
     ),
-    entretien=[
-        "Cite tes categories d'erreur et la strategie de chacune.",
-        "Explique ce que tu laisses a Temporal et ce que tu gardes en propre.",
-        "Donne les six metriques de ton tableau de bord.",
+    a_retenir=[
+        "Les categories d'erreur et la strategie de chacune.",
+        "Ce qui revient a Temporal et ce qui reste en propre.",
+        "Les six metriques d'un tableau de bord de suivi.",
     ],
     sources=[
         Source(

@@ -229,13 +229,13 @@ porte     python -m fabrique.evaluation.ci"""),
         "candidat, MARGE) et renvoie 0.",
         dependances=["langgraph", "langfuse"],
     ),
-    entretien=[
-        "Explique pourquoi la porte de non-regression tourne en dernier dans le "
-        "pipeline de CI, apres le lint, le format et les tests.",
-        "Un score recule de 0.02 sous une marge de 0.05. Que repond la porte, et "
+    a_retenir=[
+        "Pourquoi la porte de non-regression tourne en dernier dans le pipeline de CI, "
+        "apres le lint, le format et les tests.",
+        "Un score recule de 0.02 sous une marge de 0.05 : ce que repond la porte, et "
         "pourquoi ce n'est pas un bug.",
-        "Quelle est la limite actuelle de cette porte concernant les fournisseurs "
-        "OVHcloud et Anthropic, et que ferais-tu pour la reduire.",
+        "La limite actuelle de cette porte concernant les fournisseurs OVHcloud et "
+        "Anthropic, et comment la reduire.",
     ],
     sources=[
         Source(

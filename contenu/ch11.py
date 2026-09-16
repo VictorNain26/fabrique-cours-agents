@@ -218,12 +218,12 @@ repartition des categories d'erreur   panne fournisseur, sortie invalide, budget
         "get_client().flush().",
         dependances=["langfuse"],
     ),
-    entretien=[
-        "Explique pourquoi observe ne doit jamais faire echouer la fabrique quand "
-        "Langfuse est indisponible.",
-        "Pourquoi le code de violation sert-il de nom de score, plutot que le message ?",
-        "Cite trois des six metriques d'une revue hebdomadaire et ce que chacune "
-        "detecterait qu'une autre ne detecte pas.",
+    a_retenir=[
+        "Pourquoi observe ne doit jamais faire echouer la fabrique quand Langfuse est "
+        "indisponible.",
+        "Pourquoi le code de violation sert de nom de score, plutot que le message.",
+        "Trois des six metriques d'une revue hebdomadaire et ce que chacune detecterait "
+        "qu'une autre ne detecte pas.",
     ],
     sources=[
         Source(

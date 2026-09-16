@@ -391,12 +391,11 @@ Surcharge       -> 503    tous les fournisseurs sont satures"""),
         "reprise.en_attente(graphe, config) repond deja a la question.",
         dependances=["fastapi", "langgraph"],
     ),
-    entretien=[
-        "Explique ou vit ta validation et pourquoi tu ne la repetes pas plus loin.",
-        "Dis ce qui se passe chez toi quand le service redemarre pendant qu'une page "
-        "attend une validation humaine.",
-        "Donne le code HTTP que tu renvoies quand le budget d'une page est epuise, et "
-        "pourquoi celui-la.",
+    a_retenir=[
+        "Ou vit la validation et pourquoi elle n'est pas repetee plus loin.",
+        "Ce qui se passe quand le service redemarre pendant qu'une page attend une "
+        "validation humaine.",
+        "Le code HTTP a renvoyer quand le budget d'une page est epuise, et pourquoi celui-la.",
     ],
     sources=[
         Source(

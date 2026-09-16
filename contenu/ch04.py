@@ -172,8 +172,8 @@ CH4 = Chapitre(
     duree_min=40,
     blocs=[
         T(
-            "Version installee : temporalio 1.33.0. C'est la techno de l'offre que tu "
-            "maitrises le moins, et celle ou une mauvaise reponse coute le plus cher."
+            "Version installee : temporalio 1.33.0. C'est une des technos les plus exigeantes "
+            "du cours, et celle ou une erreur de determinisme coute le plus cher en production."
         ),
         H("Pourquoi le determinisme"),
         T(
@@ -193,7 +193,7 @@ CH4 = Chapitre(
 #   no system date or time"""),
         T(
             "Ces six lignes viennent de la page Workflow Basics du SDK Python. Apprends-les "
-            "telles quelles, elles se recitent bien en entretien."
+            "telles quelles, elles structurent tout le reste du chapitre."
         ),
         H("Les alternatives sures fournies par le SDK"),
         C("""workflow.logger.info(...)     # au lieu de print ou logging
@@ -306,10 +306,10 @@ workflow.now()                      # au lieu de datetime.now() ou time.time()""
         "Boucle bornee a 3 tours entre generer_page et controler_page.",
         dependances=["temporalio"],
     ),
-    entretien=[
-        "Recite les six contraintes de determinisme.",
-        "Explique pourquoi LangGraph et Temporal ne se remplacent pas.",
-        "Dis dans quel cas Temporal serait surdimensionne.",
+    a_retenir=[
+        "Les six contraintes de determinisme, et pourquoi chacune casse le rejeu.",
+        "Pourquoi LangGraph et Temporal ne se remplacent pas.",
+        "Dans quel cas Temporal serait surdimensionne.",
     ],
     sources=[
         Source(

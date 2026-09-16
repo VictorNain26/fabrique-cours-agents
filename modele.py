@@ -68,5 +68,5 @@ class Chapitre:
     blocs: list[Bloc] = field(default_factory=list)
     questions: list[Question] = field(default_factory=list)
     kata: Kata | None = None
-    entretien: list[str] = field(default_factory=list)
+    a_retenir: list[str] = field(default_factory=list)
     sources: list[Source] = field(default_factory=list)
