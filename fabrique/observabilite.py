@@ -21,15 +21,25 @@ def actif() -> bool:
 
 
 def tracer_violation(v: Violation) -> None:
+    """Enregistre une violation comme un score ancre dans une observation.
+
+    Un score doit etre rattache a quelque chose : trace, observation, session ou
+    dataset run. Sans ancrage, l'API le refuse en 400 alors que la signature du
+    SDK presente tous ces champs comme optionnels.
+    """
     if not actif():
         return
 
-    get_client().create_score(
-        name=v.code,
-        value=1.0,
-        data_type="BOOLEAN",
-        comment=v.message,
-    )
+    client = get_client()
+    with client.start_as_current_observation(as_type="guardrail", name=v.code) as span:
+        span.update(metadata={"gravite": v.gravite, "indice": v.indice})
+        client.create_score(
+            name=v.code,
+            value=1.0,
+            data_type="BOOLEAN",
+            comment=v.message,
+            trace_id=client.get_current_trace_id(),
+        )
 
 
 def vider() -> None:

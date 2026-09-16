@@ -150,8 +150,5 @@ l'argent à chaque push finirait désactivée.
 Les tests automatisés ne couvrent les adaptateurs réels que sur la traduction de
 leurs erreurs ; les appels ci-dessus ont été faits à la main, pas en CI.
 
-Aucun serveur Langfuse n'a tourné : les tests prouvent que le SDK émet bien une
-requête avec le bon contenu, pas qu'une instance réelle l'accepte. L'auto-hébergement
-demande quatre services, c'est documenté dans [`docs/langfuse.md`](docs/langfuse.md).
-
-Le déploiement sur une infrastructure réelle reste à faire.
+Le déploiement sur une infrastructure réelle reste à faire : tout tourne en local
+ou sur un runner GitHub.

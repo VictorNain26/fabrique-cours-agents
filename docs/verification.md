@@ -39,6 +39,8 @@ openai 3.14.0 · fastapi 0.141.1 · psycopg 3.3.5
 | `WorkflowEnvironment.start_time_skipping()` demarre **sans acces reseau externe** : le serveur de test est embarque dans le SDK, rien n'est telecharge | resolution DNS bloquee puis demarrage reussi |
 | Le SDK Langfuse a **deux chemins d'export distincts** : les spans en OTLP protobuf vers `/api/public/otel/v1/traces`, les scores en REST JSON vers `/api/public/ingestion` avec `Authorization: Basic` | lecture de `langfuse/_client/span_processor.py` et `langfuse/_utils/request.py` |
 | **La CI passe sur un runner GitHub reel** : lint, format, 119 tests, puis la porte de non-regression sur le golden dataset | run public du depot, `actions/checkout@v7` et `actions/setup-python@v7` |
+| **Une instance Langfuse auto-hebergee recoit et conserve la telemetrie de la fabrique** : 5 observations `GUARDRAIL` et 5 scores `LIEN_MORT` issus de vraies generations, lus via `/api/public/v3/scores` | stack Langfuse complete lancee en local (6 services, ~3 Go), projet provisionne par `LANGFUSE_INIT_*` |
+| **L'API refuse un score sans point d'ancrage** (`traceId`, `observationId`, `sessionId` ou `datasetRunId`) en 400, alors que la signature de `create_score` presente tous ces champs comme optionnels | POST direct sur `/api/public/ingestion`, avec et sans `traceId` |
 | **La telemetrie sort reellement du processus** : un recepteur HTTP local recoit un evenement `score-create` apres une vraie generation | `tests/test_observabilite_reseau.py` |
 | Les reponses HTTP exposent le fournisseur qui a repondu et le cout de la page | test `test_la_reponse_expose_qui_a_repondu_et_le_cout` |
 | Le noeud de controle appelle bien `tracer_violation` : l'instrumentation est cablee, pas decorative | test `test_le_noeud_de_controle_trace_les_violations` |
@@ -77,7 +79,5 @@ l'argent ou dépend d'un service tiers finit désactivé. Les adaptateurs réels
 leurs propres tests d'intégration dans `tests/test_providers_reels.py`, ignorés
 par défaut et lancés à la demande avec `FABRIQUE_TESTS_REELS=1`.
 
-Aucun serveur Langfuse n'a tourné : la preuve porte sur le fait que le SDK émet
-bien une requête avec le bon contenu, pas sur son acceptation par une instance
-réelle. L'auto-hébergement exige quatre services, trop pour la machine de
-développement.
+Le déploiement sur une infrastructure réelle reste à faire : tout ce qui précède
+tourne en local ou sur un runner GitHub.

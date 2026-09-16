@@ -47,13 +47,15 @@ class _RecepteurIngestion(BaseHTTPRequestHandler):
         return
 
 
-def _attendre_au_moins_une_requete(timeout: float = TIMEOUT_ATTENTE_SECONDES) -> bool:
+def _attendre_les_deux_chemins(timeout: float = TIMEOUT_ATTENTE_SECONDES) -> bool:
+    """Les spans et les scores partent par deux chemins et deux files distinctes."""
+    attendus = {"/api/public/otel/v1/traces", "/api/public/ingestion"}
     limite = time.monotonic() + timeout
     while time.monotonic() < limite:
-        if _RecepteurIngestion.requetes:
+        if attendus <= {chemin for chemin, _, _ in _RecepteurIngestion.requetes}:
             return True
         time.sleep(0.02)
-    return bool(_RecepteurIngestion.requetes)
+    return False
 
 
 def test_tracer_violation_envoie_reellement_une_requete_http(monkeypatch) -> None:
@@ -77,17 +79,32 @@ def test_tracer_violation_envoie_reellement_une_requete_http(monkeypatch) -> Non
 
         observabilite.vider()
 
-        assert _attendre_au_moins_une_requete(), "aucune requete recue par le recepteur local"
+        assert _attendre_les_deux_chemins(), (
+            "les deux chemins d export n ont pas ete empruntes : "
+            f"{[c for c, _, _ in _RecepteurIngestion.requetes]}"
+        )
     finally:
         serveur.shutdown()
         serveur.server_close()
         thread_serveur.join(timeout=2)
         reglages.cache_clear()
 
-    chemin, en_tetes, corps = _RecepteurIngestion.requetes[0]
-    assert chemin == "/api/public/ingestion"
+    chemins = [chemin for chemin, _, _ in _RecepteurIngestion.requetes]
+
+    # Les deux chemins d'export du SDK : les spans en OTLP, les scores en REST.
+    # L'ordre entre les deux n'est pas garanti, on n'assert donc que leur presence.
+    assert "/api/public/otel/v1/traces" in chemins, chemins
+    assert "/api/public/ingestion" in chemins, chemins
+
+    ingestions = [
+        (en_tetes, corps)
+        for chemin, en_tetes, corps in _RecepteurIngestion.requetes
+        if chemin == "/api/public/ingestion"
+    ]
+    en_tetes, corps = ingestions[0]
     assert en_tetes["Authorization"].startswith("Basic ")
 
-    charge = json.loads(corps)
-    evenements = charge["batch"]
+    evenements = json.loads(corps)["batch"]
     assert any(e["type"] == "score-create" for e in evenements)
+    ancres = [e["body"].get("traceId") for e in evenements if e["type"] == "score-create"]
+    assert all(ancres), "un score sans traceId est refuse en 400 par l'API"
