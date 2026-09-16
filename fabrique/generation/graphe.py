@@ -6,7 +6,9 @@ prix) sont injectees a la racine, dans `construire`, pour que chaque etape se
 teste avec des doubles.
 
 La redaction passe par la chaine de repli : le premier fournisseur qui repond
-gagne, et son nom remonte dans l'etat. Le budget est verifie avant chaque essai.
+gagne, et son nom remonte dans l'etat. Le budget couvre la page entiere : chaque
+tour recoit ce que les tours precedents ont laisse, et `cout` cumule tous les
+tours.
 Les retours de correction s'accumulent dans l'etat et sont compactes sous un
 budget de tokens avant chaque redaction.
 
@@ -101,21 +103,21 @@ def construire(
     def noeud_redaction(etat: EtatPage) -> dict:
         essais = etat.get("essais", 0) + 1
         invite = invite_de(etat)
+        deja_depense = etat.get("cout", 0.0)
 
         resultat = repli(
             fournisseurs,
-            budget_par_page,
+            budget_par_page - deja_depense,
             lambda f: generer(f, invite=invite, schema=Page, systeme=SYSTEME),
         )
+        cout = deja_depense + resultat.cout
 
         return {
             "essais": essais,
             "page": resultat.valeur.model_dump(),
             "fournisseur": resultat.fournisseur,
-            "cout": resultat.cout,
-            "journal": [
-                f"redaction: essai {essais}, {resultat.fournisseur}, {resultat.cout:.4f} EUR"
-            ],
+            "cout": cout,
+            "journal": [f"redaction: essai {essais}, {resultat.fournisseur}, {cout:.4f} EUR"],
         }
 
     def noeud_controle(etat: EtatPage) -> dict:

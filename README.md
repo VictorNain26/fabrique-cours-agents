@@ -59,7 +59,8 @@ La rédaction passe par une **chaîne de fournisseurs** ordonnée du moins cher 
 plus cher : le premier qui répond gagne, on ne bascule que sur surcharge, et le
 nom de celui qui a réellement répondu est écrit dans l'état avec son coût.
 Chaque essai débite d'abord une enveloppe de coût estimé du budget restant,
-avant même l'appel réseau — épuisée, l'API renvoie 402. Un nom absent de
+avant même l'appel réseau — épuisée, l'API renvoie 402. `BUDGET_PAR_PAGE` est
+une enveloppe par page, cumulée sur tous les tours de correction. Un nom absent de
 `fake`, `ovhcloud`, `anthropic` dans `FOURNISSEURS` est rejeté au démarrage.
 
 ```

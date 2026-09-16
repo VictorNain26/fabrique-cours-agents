@@ -151,3 +151,28 @@ def test_le_budget_de_tokens_invite_atteint_le_graphe(client: TestClient, monkey
     client.post("/pages", json={"brief": "b", "pages_existantes": []})
 
     assert captures["budget_tokens_invite"] == 777
+
+
+def test_un_budget_epuise_sur_plusieurs_tours_renvoie_402(client: TestClient) -> None:
+    import json
+
+    from fabrique.providers.fake import FournisseurFake
+
+    def page(titres: int) -> str:
+        return json.dumps(
+            {
+                "titre_h1": "VPS",
+                "meta_description": "d" * 130,
+                "blocs": [{"type": "titre", "contenu": f"Titre {i}"} for i in range(titres)],
+                "liens": [],
+            }
+        )
+
+    fournisseur = FournisseurFake(reponses=[page(2), page(1)])
+    fournisseur.cout_par_appel = reglages().budget_par_page * 0.6
+    client.app.state.fournisseurs = [fournisseur]
+
+    reponse = client.post("/pages", json={"brief": "b"})
+
+    assert reponse.status_code == 402
+    assert "budget" in reponse.json()["detail"]

@@ -295,3 +295,27 @@ def test_le_budget_arrete_la_chaine_avant_l_appel() -> None:
     graphe = _graphe([cher], budget_par_page=0.5)
     with pytest.raises(BudgetDepasse):
         graphe.invoke({"brief": "brief"}, config=_config("budget-1"))
+
+
+def test_le_budget_couvre_la_page_entiere_pas_chaque_tour() -> None:
+    from fabrique.providers.base import BudgetDepasse
+
+    fournisseur = FournisseurFake(reponses=[PAGE_INVALIDE, PAGE_VALIDE])
+    fournisseur.cout_par_appel = 0.3
+
+    graphe = _graphe([fournisseur], budget_par_page=0.5, max_tours=3)
+    with pytest.raises(BudgetDepasse):
+        graphe.invoke({"brief": "brief"}, config=_config("budget-2"))
+
+    assert len(fournisseur.appels) == 1
+
+
+def test_le_cout_de_la_page_cumule_tous_les_tours() -> None:
+    fournisseur = FournisseurFake(reponses=[PAGE_INVALIDE, PAGE_VALIDE])
+    fournisseur.cout_par_appel = 0.1
+
+    graphe = _graphe([fournisseur], budget_par_page=0.5, max_tours=3)
+    etat = graphe.invoke({"brief": "brief"}, config=_config("budget-3"))
+
+    assert etat["cout"] == pytest.approx(0.2)
+    assert "redaction: essai 2, fake, 0.2000 EUR" in etat["journal"]
