@@ -105,27 +105,22 @@ La CI enchaîne les quatre. La porte de non-régression rejoue le golden dataset
 compare à `fabrique/evaluation/reference.json` versionné dans le dépôt, et échoue
 si la qualité recule au-delà de la marge.
 
-## Les deux fournisseurs ont été testés contre leur API réelle
+## Les deux fournisseurs marchent contre leur API réelle
 
-Pas seulement écrits contre la doc : exécutés, le 15/09/2026.
+Pas seulement écrits contre la documentation : exécutés.
 
-**Anthropic (Sonnet 5).** La chaîne complète a tourné contre le vrai modèle, et
-deux échecs réels se sont produits — ce qui vaut mieux qu'un succès du premier
-coup. Le modèle a d'abord rendu une `meta_description` au-delà de 158 caractères ;
-l'erreur lui a été renvoyée en nommant le champ, le second jet faisait 141. Puis,
-sur le graphe complet, il a produit une page sans aucun bloc `titre` : violation
-`H1_MULTIPLE` bloquante, correction réinjectée, second jet conforme, interruption
-pour validation, publication **une seule fois** après approbation.
+**OVHcloud AI Endpoints** (`Meta-Llama-3_3-70B-Instruct`) rend une `Page` valide
+au premier essai grâce à `response_format`. **Anthropic** (`claude-sonnet-5`)
+aussi, et la chaîne complète a été exercée de bout en bout : quand le modèle sort
+du schéma, l'erreur nommant le champ lui repart et le second jet passe ; quand il
+viole un garde-fou, la correction est réinjectée puis le graphe s'interrompt pour
+la validation humaine et ne publie qu'une fois.
 
-**OVHcloud AI Endpoints (Llama 3.3 70B).** Page valide au premier essai grâce à
-`response_format`, avec une `meta_description` à 158 caractères — exactement la
-borne du schéma. 65 tokens en entrée, 546 en sortie.
+Haiku 4.5 est le modèle par défaut mais n'a pas été appelé : son tarif ci-dessous
+est une projection, celui d'OVHcloud une mesure.
 
-Ces appels datent d'avant la bascule du modèle par défaut : **Haiku 4.5, qui est
-désormais le défaut, n'a jamais été appelé pour de vrai.** Le tarif ci-dessous est
-donc une projection pour Haiku, une mesure pour OVHcloud.
-
-Le détail et les niveaux de preuve sont dans [`docs/verification.md`](docs/verification.md).
+Le détail, avec un niveau de preuve par affirmation, est dans
+[`docs/verification.md`](docs/verification.md).
 
 ## Ce que ça coûte
 
@@ -149,6 +144,6 @@ leurs erreurs ; les appels ci-dessus ont été faits à la main, pas en CI.
 Le workflow GitHub Actions n'a jamais tourné sur un runner ; les versions
 d'actions viennent de leurs pages de releases.
 
-Temporal reste théorique — il n'est pas dans l'application. Langfuse est
-instrumenté mais n'a jamais été connecté à un serveur. Le déploiement sur une
-infrastructure réelle reste à faire.
+Temporal reste théorique — il n'est pas dans l'application. L'instrumentation
+Langfuse est câblée et son câblage est testé, mais aucun serveur Langfuse n'a
+reçu de trace. Le déploiement sur une infrastructure réelle reste à faire.
