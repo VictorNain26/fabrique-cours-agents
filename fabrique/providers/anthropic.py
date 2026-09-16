@@ -21,10 +21,27 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
+from fabrique.observabilite import observation
+
 from .base import Fatale, Reponse, SortieInvalide, Surcharge
 
 NOM_OUTIL = "produire_sortie"
 MAX_TOKENS = 4096
+
+# Tarif du README (« Ce que ça coûte »), en dollars comme l'attend
+# `cost_details`. Hors de cette table, aucun cout n'est declare : Langfuse le
+# deduit alors de ses propres definitions de modeles, s'il en a une.
+TARIFS_USD_PAR_MILLION = {"claude-haiku-4-5-20251001": (1.0, 5.0)}
+
+
+def _cout_usd(modele: str, tokens_entree: int, tokens_sortie: int) -> dict[str, float] | None:
+    tarif = TARIFS_USD_PAR_MILLION.get(modele)
+    if tarif is None:
+        return None
+    return {
+        "input": tokens_entree * tarif[0] / 1_000_000,
+        "output": tokens_sortie * tarif[1] / 1_000_000,
+    }
 
 
 class FournisseurAnthropic:
@@ -77,34 +94,51 @@ class FournisseurAnthropic:
         if systeme:
             arguments["system"] = systeme
 
-        try:
-            message = self._client.messages.create(**arguments)
-        except anthropic.RateLimitError as erreur:
-            raise Surcharge(str(erreur)) from erreur
-        except anthropic.OverloadedError as erreur:
-            raise Surcharge(str(erreur)) from erreur
-        except (anthropic.APIConnectionError, anthropic.APITimeoutError) as erreur:
-            raise Surcharge(str(erreur)) from erreur
-        except (
-            anthropic.AuthenticationError,
-            anthropic.PermissionDeniedError,
-            anthropic.NotFoundError,
-        ) as erreur:
-            raise Fatale(str(erreur)) from erreur
+        with observation(
+            self.nom,
+            as_type="generation",
+            model=self.modele,
+            model_parameters={"max_tokens": MAX_TOKENS},
+            input={"system": systeme, "messages": messages},
+        ) as maj:
+            try:
+                message = self._client.messages.create(**arguments)
+            except anthropic.RateLimitError as erreur:
+                raise Surcharge(str(erreur)) from erreur
+            except anthropic.OverloadedError as erreur:
+                raise Surcharge(str(erreur)) from erreur
+            except (anthropic.APIConnectionError, anthropic.APITimeoutError) as erreur:
+                raise Surcharge(str(erreur)) from erreur
+            except (
+                anthropic.AuthenticationError,
+                anthropic.PermissionDeniedError,
+                anthropic.NotFoundError,
+            ) as erreur:
+                raise Fatale(str(erreur)) from erreur
 
-        bloc_outil = next((bloc for bloc in message.content if bloc.type == "tool_use"), None)
-        if bloc_outil is None:
-            raise SortieInvalide("aucun bloc tool_use dans la reponse")
+            usage = message.usage
+            tokens_entree = usage.input_tokens if usage else 0
+            tokens_sortie = usage.output_tokens if usage else 0
+            maj(
+                model=message.model,
+                usage_details={"input": tokens_entree, "output": tokens_sortie},
+                cost_details=_cout_usd(self.modele, tokens_entree, tokens_sortie),
+            )
 
-        try:
-            instance = schema.model_validate(bloc_outil.input)
-        except ValidationError as erreur:
-            raise SortieInvalide(str(erreur)) from erreur
+            bloc_outil = next((bloc for bloc in message.content if bloc.type == "tool_use"), None)
+            if bloc_outil is None:
+                raise SortieInvalide("aucun bloc tool_use dans la reponse")
 
-        usage = message.usage
-        return Reponse(
-            texte=instance.model_dump_json(),
-            modele=message.model,
-            tokens_entree=usage.input_tokens if usage else 0,
-            tokens_sortie=usage.output_tokens if usage else 0,
-        )
+            try:
+                instance = schema.model_validate(bloc_outil.input)
+            except ValidationError as erreur:
+                raise SortieInvalide(str(erreur)) from erreur
+
+            texte = instance.model_dump_json()
+            maj(output=texte)
+            return Reponse(
+                texte=texte,
+                modele=message.model,
+                tokens_entree=tokens_entree,
+                tokens_sortie=tokens_sortie,
+            )

@@ -9,6 +9,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TypeVar
 
+from fabrique.observabilite import observation
 from fabrique.providers.base import BudgetDepasse, Fatale, Fournisseur, SortieInvalide, Surcharge
 
 T = TypeVar("T")
@@ -47,7 +48,15 @@ def executer(
             essais += 1
 
             try:
-                valeur = appel(fournisseur)
+                with observation(
+                    f"essai {fournisseur.nom}",
+                    metadata={
+                        "essai": essais,
+                        "cout_par_appel": fournisseur.cout_par_appel,
+                        "budget_restant": restant,
+                    },
+                ):
+                    valeur = appel(fournisseur)
             except Fatale:
                 raise
             except Surcharge:

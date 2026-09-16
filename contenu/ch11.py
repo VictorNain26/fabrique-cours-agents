@@ -17,18 +17,50 @@ sans compte Langfuse.
 
 from __future__ import annotations
 
-from langfuse import get_client, observe
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager, nullcontext
+from typing import Any
+
+from langfuse import get_client, observe, propagate_attributes
 
 from fabrique.config import reglages
 from fabrique.modeles import Violation
 
-__all__ = ["actif", "observe", "tracer_violation", "vider"]
+__all__ = ["actif", "observation", "observe", "tracer_violation", "vider"]
+
+NOM_TRACE = "page"
 
 
 def actif() -> bool:
     # True seulement si les deux cles publique et secrete sont non vides dans
     # reglages(). Une seule des deux presente ne suffit pas.
     raise NotImplementedError
+
+
+def _rien(**_: Any) -> None:
+    return None
+
+
+@contextmanager
+def observation(
+    nom: str,
+    *,
+    as_type: str = "span",
+    fil: str | None = None,
+    **attributs: Any,
+) -> Iterator[Callable[..., None]]:
+    # Si actif() est faux : yield _rien, puis return. Rien d'autre.
+    # Sinon :
+    #   - fil (le thread_id) donne la graine de la trace :
+    #     trace_context={"trace_id": client.create_trace_id(seed=fil)}
+    #     et propagate_attributes(trace_name=NOM_TRACE, session_id=fil)
+    #     (nullcontext() quand fil vaut None)
+    #   - client.start_as_current_observation(name=nom, as_type=as_type,
+    #     trace_context=..., **attributs) en gestionnaire de contexte
+    #   - yield obs.update ; une exception est notee
+    #     obs.update(level="ERROR", status_message=...) puis relancee
+    raise NotImplementedError
+    yield _rien
 
 
 def tracer_violation(v: Violation) -> None:
@@ -53,6 +85,7 @@ def verif11(m):
     tracer_violation = ok(m, "tracer_violation")
     vider = ok(m, "vider")
     observe = ok(m, "observe")
+    observation = ok(m, "observation")
     res = []
 
     res.append((actif() is False, "actif() renvoie False sans cles Langfuse dans l'environnement"))
@@ -71,6 +104,22 @@ def verif11(m):
     except Exception as e:
         leve = e
     res.append((leve is None, "vider ne leve pas"))
+
+    leve = None
+    try:
+        with observation("essai", as_type="generation", fil="k11", model="m") as maj:
+            maj(usage_details={"input": 1, "output": 2}, cost_details={"total": 0.0})
+    except Exception as e:
+        leve = e
+    res.append((leve is None, "observation ne leve pas et sa mise a jour absorbe tout"))
+
+    propagee = False
+    try:
+        with observation("essai"):
+            raise ValueError("panne fournisseur")
+    except ValueError:
+        propagee = True
+    res.append((propagee, "observation laisse passer l'exception de l'appel observe"))
 
     @observe
     def double(x):
@@ -122,6 +171,43 @@ def generer_page(brief: str) -> Page:
             "de contexte pour englober un bloc de code, et `propagate_attributes"
             "(user_id=..., session_id=..., tags=...)` pour attacher des attributs a tout un "
             "sous-arbre d'un coup."
+        ),
+        H("Un appel fournisseur est une generation"),
+        C("""with observation(
+    "anthropic",
+    as_type="generation",
+    model="claude-haiku-4-5-20251001",
+    input={"system": systeme, "messages": messages},
+) as maj:
+    message = client.messages.create(...)
+    maj(
+        usage_details={"input": 1000, "output": 200},
+        cost_details={"input": 0.001, "output": 0.001},   # en USD
+    )"""),
+        T(
+            "Une observation de type generation porte ce qu'un span ordinaire n'a pas : "
+            "le modele, les tokens (usage_details) et le cout (cost_details). C'est elle "
+            "qui alimente les tableaux de cout et de latence par modele. Les tokens sont "
+            "notes des la reponse, avant la validation du schema : une sortie invalide a "
+            "deja ete facturee. `update_current_generation` fait la meme chose depuis une "
+            'fonction decoree `@observe(as_type="generation")`.'
+        ),
+        A(
+            "cost_details est en dollars (doc Langfuse, Token and cost tracking). Le "
+            "fournisseur Anthropic y declare le tarif du README pour Haiku 4.5. OVHcloud "
+            "facture en euros : son cout part en metadonnee cout_eur, sans taux de change "
+            "invente. Sans cost_details, Langfuse deduit le cout de ses propres "
+            "definitions de modeles quand il en a une."
+        ),
+        H("Une trace par page, meme apres l'interruption"),
+        T(
+            "La validation humaine coupe la page en deux invoke sur le meme thread_id. "
+            "Chaque noeud observe ouvre son span avec trace_context, et "
+            "create_trace_id(seed=thread_id) donne le meme identifiant aux deux "
+            "invocations : redaction, essais de la chaine de repli, generations, "
+            "garde-fous et publication tombent dans une seule trace. Un essai en Surcharge y apparait "
+            "en ERROR, suivi du fournisseur qui a pris le relais : une regression se "
+            "lit dans la trace, pas dans les journaux."
         ),
         H("Le score n'est pas un booleen"),
         C("""get_client().create_score(
@@ -206,7 +292,7 @@ repartition des categories d'erreur   panne fournisseur, sortie invalide, budget
     kata=Kata(
         module="fabrique.observabilite",
         consigne="Ecris le module d'observabilite de la fabrique : actif(), "
-        "tracer_violation(), vider(), et la reexportation de observe. Le "
+        "observation(), tracer_violation(), vider(), et la reexportation de observe. Le "
         "correcteur tourne sans cles Langfuse : ton module doit rester "
         "silencieux et ne jamais lever dans ce cas.",
         squelette=SQ11,
@@ -236,6 +322,21 @@ repartition des categories d'erreur   panne fournisseur, sortie invalide, budget
             "Comportement sans cles : get_client() journalise "
             "l'avertissement d'authentification et se desactive, observe() devient "
             "un no-op, verifie en executant fabrique.observabilite",
+        ),
+        Source(
+            "recherche",
+            "Langfuse, Token and cost tracking : usage_details et cost_details, cout en USD",
+            "https://github.com/langfuse/langfuse-docs/blob/main/content/docs/observability/features/token-and-cost-tracking.mdx",
+        ),
+        Source(
+            "recherche",
+            "Langfuse, Trace IDs and distributed tracing : trace_context et create_trace_id(seed=...)",
+            "https://github.com/langfuse/langfuse-docs/blob/main/content/docs/observability/features/trace-ids-and-distributed-tracing.mdx",
+        ),
+        Source(
+            "execute",
+            "Des variables LANGFUSE_* presentes mais vides suffisent au SDK 4.15.3 pour ouvrir "
+            "un exporteur : d'ou le garde actif() avant get_client()",
         ),
         Source("auteur", "Les six metriques d'une revue hebdomadaire"),
         Source("auteur", "Le principe : l'instrumentation n'est jamais une dependance dure"),
