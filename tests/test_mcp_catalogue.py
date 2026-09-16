@@ -73,3 +73,29 @@ async def test_get_produit_reference_inconnue_renvoie_none(serveur):
     resultat = await serveur.call_tool("get_produit", {"reference": "inexistant"})
 
     assert resultat.structured_content["result"] is None
+
+
+def test_le_client_resout_le_prix_par_le_protocole() -> None:
+    from fabrique.mcp_catalogue.client import resoudre_prix
+
+    prix = resoudre_prix("vps-comfort")
+
+    assert prix is not None
+    assert prix.prix_mensuel_eur == catalogue.get("vps-comfort").prix_mensuel_eur
+
+
+def test_le_client_rend_none_pour_une_reference_inconnue() -> None:
+    from fabrique.mcp_catalogue.client import resoudre_prix
+
+    assert resoudre_prix("inexistant") is None
+
+
+@pytest.mark.asyncio
+async def test_une_reference_inconnue_est_une_erreur_d_outil_nommee(serveur):
+    from mcp import Client
+
+    async with Client(serveur) as client:
+        resultat = await client.call_tool("resoudre_prix", {"reference": "inexistant"})
+
+    assert resultat.is_error is True
+    assert "inexistant" in resultat.content[0].text

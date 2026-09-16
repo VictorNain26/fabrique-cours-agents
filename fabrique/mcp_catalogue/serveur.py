@@ -8,6 +8,7 @@ reel a partir du catalogue.
 from __future__ import annotations
 
 from mcp.server import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 from pydantic import BaseModel
 
 from fabrique.mcp_catalogue import catalogue
@@ -54,7 +55,7 @@ def construire() -> MCPServer:
         """
         produit = catalogue.get(reference)
         if produit is None:
-            raise ValueError(f"reference inconnue au catalogue: {reference}")
+            raise ToolError(f"reference inconnue au catalogue: {reference}")
         return PrixResolu(
             reference=produit.reference,
             prix_mensuel_eur=produit.prix_mensuel_eur,
