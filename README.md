@@ -158,7 +158,10 @@ python -m fabrique.evaluation.ci      # porte de non-regression
 La CI enchaîne les quatre sur un runner GitHub, en 36 secondes. La porte de
 non-régression rejoue le golden dataset, compare à
 `fabrique/evaluation/reference.json` versionné dans le dépôt, et échoue si la
-qualité recule au-delà de la marge.
+qualité recule au-delà de la marge. Une référence absente la fait échouer aussi ;
+la créer ou la remplacer est un geste explicite,
+`python -m fabrique.evaluation.ci --ecrire-reference`, dont le diff se relit en
+revue.
 
 ## Les deux fournisseurs marchent contre leur API réelle
 
