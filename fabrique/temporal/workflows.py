@@ -29,6 +29,15 @@ RETRY_ACTIVITE = RetryPolicy(
     maximum_attempts=3,
 )
 
+# BudgetDepasse signale une enveloppe epuisee, pas un incident transitoire :
+# la retenter ne fait que consommer un peu plus du budget deja depense.
+RETRY_GENERATION = RetryPolicy(
+    initial_interval=timedelta(seconds=1),
+    backoff_coefficient=2.0,
+    maximum_attempts=3,
+    non_retryable_error_types=["BudgetDepasse"],
+)
+
 
 @workflow.defn
 class GenerationPage:
@@ -41,16 +50,19 @@ class GenerationPage:
         page_json = ""
         violations: list[dict] = []
         bloquantes: list[dict] = []
+        cout_total = 0.0
 
         for tour in range(1, max_tours + 1):
             workflow.logger.info(f"tour {tour}/{max_tours}")
 
-            page_json = await workflow.execute_activity(
+            resultat_generation = await workflow.execute_activity(
                 generer_page,
-                args=[brief, retour],
+                args=[brief, retour, cout_total],
                 start_to_close_timeout=TIMEOUT_GENERATION,
-                retry_policy=RETRY_ACTIVITE,
+                retry_policy=RETRY_GENERATION,
             )
+            page_json = resultat_generation["page"]
+            cout_total += resultat_generation["cout"]
 
             violations = await workflow.execute_activity(
                 controler_page,
@@ -68,7 +80,12 @@ class GenerationPage:
             )
 
         if bloquantes:
-            return {"page": page_json, "violations": violations, "publiee": False}
+            return {
+                "page": page_json,
+                "violations": violations,
+                "publiee": False,
+                "cout": cout_total,
+            }
 
         cle_idempotence = str(workflow.uuid4())
         identifiant = await workflow.execute_activity(
@@ -83,4 +100,5 @@ class GenerationPage:
             "violations": violations,
             "publiee": True,
             "identifiant_publication": identifiant,
+            "cout": cout_total,
         }

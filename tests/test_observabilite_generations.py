@@ -1,12 +1,5 @@
-"""Ce que Langfuse recoit d'une generation de page, lu dans les spans exportes.
-
-Les spans partent vers un exporteur OpenTelemetry en memoire (parametre
-`span_exporter` du constructeur `Langfuse`, langfuse 4.15.3) : on lit les
-attributs `langfuse.observation.*` que le SDK aurait envoyes, sans reseau.
-Un `TracerProvider` propre au test evite de partager celui, global, que le SDK
-enregistre au premier client. `LangfuseResourceManager.reset()` vide le registre
-des clients : `get_client()` desactive le tracage des qu'il en trouve deux,
-et le test reseau laisse le sien derriere lui.
+"""Ce que Langfuse recoit d'une generation de page, lu dans les spans exportes
+par la fixture `spans` (`tests/conftest.py`).
 """
 
 from __future__ import annotations
@@ -15,11 +8,8 @@ import json
 
 import pytest
 from langfuse import Langfuse
-from langfuse._client.resource_manager import LangfuseResourceManager
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.types import Command
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from pydantic import BaseModel
 
 from fabrique import observabilite
@@ -39,30 +29,6 @@ COUT = "langfuse.observation.cost_details"
 
 class Schema(BaseModel):
     valeur: str
-
-
-@pytest.fixture
-def spans(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setenv("LANGFUSE_PUBLIC_KEY", "pk-test-memoire")
-    monkeypatch.setenv("LANGFUSE_SECRET_KEY", "sk-test-memoire")
-    reglages.cache_clear()
-    LangfuseResourceManager.reset()
-    exporteur = InMemorySpanExporter()
-    client = Langfuse(
-        public_key="pk-test-memoire",
-        secret_key="sk-test-memoire",
-        base_url="http://127.0.0.1:9",
-        tracer_provider=TracerProvider(),
-        span_exporter=exporteur,
-    )
-
-    def lire():
-        client.flush()
-        return exporteur.get_finished_spans()
-
-    yield lire
-    LangfuseResourceManager.reset()
-    reglages.cache_clear()
 
 
 def _generations(spans) -> list:
@@ -91,7 +57,15 @@ def test_une_page_donne_une_trace_de_la_redaction_a_la_publication(spans, monkey
         Langfuse.create_trace_id(seed="page-1")
     }, "la reprise apres validation doit rester dans la trace de la page"
     noeuds = [s.name for s in exportes if s.attributes.get("langfuse.internal.as_root")]
-    assert noeuds == ["redaction", "controle", "correction", "redaction", "controle", "publication"]
+    assert noeuds == [
+        "redaction",
+        "controle",
+        "correction",
+        "redaction",
+        "controle",
+        "tarification",
+        "publication",
+    ]
     generations = _generations(exportes)
     assert len(generations) == 2
     assert all(g.attributes[MODELE] == "fake" for g in generations)

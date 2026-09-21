@@ -43,13 +43,16 @@ def observation(
     *,
     as_type: str = "span",
     fil: str | None = None,
+    trace: str = NOM_TRACE,
     **attributs: Any,
 ) -> Iterator[Callable[..., None]]:
     """Ouvre une observation courante et rend de quoi la mettre a jour.
 
     `fil` derive l'identifiant de trace du thread_id LangGraph : la reprise
     apres validation humaine est un second `invoke`, et sans cette graine elle
-    ouvrirait une seconde trace pour la meme page.
+    ouvrirait une seconde trace pour la meme page. `trace` nomme cette trace :
+    "page" pour le graphe de redaction, un autre nom pour d'autres pipelines
+    (le futur tuteur, par exemple) qui partagent cette meme instrumentation.
 
     Une exception est notee en niveau ERROR puis propagee : la chaine de repli
     doit rester lisible dans la trace, pas seulement dans les journaux.
@@ -60,9 +63,7 @@ def observation(
 
     client = get_client()
     contexte = {"trace_id": client.create_trace_id(seed=fil)} if fil else None
-    propagation = (
-        propagate_attributes(trace_name=NOM_TRACE, session_id=fil) if fil else nullcontext()
-    )
+    propagation = propagate_attributes(trace_name=trace, session_id=fil) if fil else nullcontext()
     with (
         client.start_as_current_observation(
             name=nom, as_type=as_type, trace_context=contexte, **attributs

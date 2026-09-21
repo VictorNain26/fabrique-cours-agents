@@ -237,7 +237,9 @@ def test_construire_sans_le_paquet_donne_une_erreur_claire(
 
     monkeypatch.setitem(sys.modules, "anthropic", None)
     with pytest.raises(ImportError):
-        module_anthropic.FournisseurAnthropic(api_key="cle-de-test")
+        module_anthropic.FournisseurAnthropic(
+            api_key="cle-de-test", modele="claude-haiku-4-5-20251001"
+        )
 
 
 def _module_anthropic_factice() -> types.ModuleType:
@@ -291,7 +293,7 @@ def fournisseur_anthropic(monkeypatch: pytest.MonkeyPatch):
 
     from fabrique.providers.anthropic import FournisseurAnthropic
 
-    fournisseur = FournisseurAnthropic(api_key="cle-de-test")
+    fournisseur = FournisseurAnthropic(api_key="cle-de-test", modele="claude-haiku-4-5-20251001")
     yield fournisseur, faux_anthropic
 
 

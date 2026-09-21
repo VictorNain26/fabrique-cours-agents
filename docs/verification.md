@@ -1,4 +1,4 @@
-# Registre de vérification — 15/09/2026
+# Registre de vérification — 16/09/2026
 
 Chaque affirmation technique du cours et de la fabrique est classée par niveau de
 preuve. `execute` est le niveau le plus fort : le comportement a été observé en
@@ -40,14 +40,19 @@ openai 3.14.0 · fastapi 0.141.1 · psycopg 3.3.5
 | Les quatre services (api, base, temporal, worker) tiennent ensemble dans ~460 Mo | `docker stats` sur la stack complete |
 | `WorkflowEnvironment.start_time_skipping()` demarre **sans acces reseau externe** : le serveur de test est embarque dans le SDK, rien n'est telecharge | resolution DNS bloquee puis demarrage reussi |
 | Le SDK Langfuse a **deux chemins d'export distincts** : les spans en OTLP protobuf vers `/api/public/otel/v1/traces`, les scores en REST JSON vers `/api/public/ingestion` avec `Authorization: Basic` | lecture de `langfuse/_client/span_processor.py` et `langfuse/_utils/request.py` |
-| **La CI passe sur un runner GitHub reel** : lint, format, 119 tests, puis la porte de non-regression sur le golden dataset | run public du depot, `actions/checkout@v7` et `actions/setup-python@v7` |
+| **La CI passe sur un runner GitHub reel** : lint, format, la suite de tests, puis la porte de non-regression sur le golden dataset | run public du depot (mesure anterieure a ce changement, 119 tests a l'epoque), `actions/checkout@v7` et `actions/setup-python@v7` |
+| `.venv/bin/pytest -q` passe apres ce changement : 153 passed, 3 skipped, en 6,56 s | execution locale du 16/09/2026 |
+| Les routes de l'API sont des fonctions `def` : `mcp.Client(construire())` et `asyncio.run()` s'executent donc dans le pool de threads de FastAPI, jamais sur la boucle asyncio de la requete, et la resolution de prix aboutit depuis une route synchrone | `tests/test_api.py`, requete HTTP de bout en bout jusqu'a `prix_affiche` |
+| `mcp.Client` accepte une instance `Server` ou `MCPServer` pour une connexion en memoire, sans process ni socket ; la docstring la presente comme un usage de test, repris ici comme mecanisme de production | docstring de `mcp.client.client.Client` (mcp 2.2.0 installe) et `fabrique/mcp_catalogue/client.py`, exerce par `tests/test_mcp_catalogue.py` |
+| Dans `Tool.run` (mcp 2.2.0), un `ToolError` leve deliberement par l'outil garde son propre texte dans le `CallToolResult(isError=True)` renvoye au client ; toute autre exception devient un `UnexpectedToolError` au message generique, sans le texte d'origine | lecture de `mcp/server/mcpserver/tools/base.py`, et `tests/test_mcp_catalogue.py::test_le_client_signale_un_catalogue_indisponible_en_cas_de_crash` qui verifie que le crash simule leve `CatalogueIndisponible` sans contenir `MESSAGE_REFERENCE_INCONNUE` ("reference inconnue au catalogue") ; l'API le traduit en 503 JSON (`tests/test_api.py::test_un_catalogue_en_panne_renvoie_un_503_json`) |
+| `SkipJsonSchema[str \| None]` retire entierement le champ `prix_affiche` de `BlocPage.model_json_schema()`, sans changer la validation du champ | `BlocPage.model_json_schema()["properties"]` execute en local : `prix_affiche` absent |
 | **Une instance Langfuse auto-hebergee recoit et conserve la telemetrie de la fabrique** : 5 observations `GUARDRAIL` et 5 scores `LIEN_MORT` issus de vraies generations, lus via `/api/public/v3/scores` | stack Langfuse complete lancee en local (6 services, ~3 Go), projet provisionne par `LANGFUSE_INIT_*` |
 | **L'API refuse un score sans point d'ancrage** (`traceId`, `observationId`, `sessionId` ou `datasetRunId`) en 400, alors que la signature de `create_score` presente tous ces champs comme optionnels | POST direct sur `/api/public/ingestion`, avec et sans `traceId` |
 | **La telemetrie sort reellement du processus** : un recepteur HTTP local recoit un evenement `score-create` apres une vraie generation | `tests/test_observabilite_reseau.py` |
 | Les reponses HTTP exposent le fournisseur qui a repondu et le cout de la page | test `test_la_reponse_expose_qui_a_repondu_et_le_cout` |
 | Le noeud de controle appelle bien `tracer_violation` : l'instrumentation est cablee, pas decorative | test `test_le_noeud_de_controle_trace_les_violations` |
 | **Une cle invalide est classee `Fatale`, pas `Surcharge`** : le repli ne boucle donc pas sur une erreur definitive | `tests/test_providers_reels.py`, appel reel avec une cle bidon |
-| **L'adaptateur Anthropic fonctionne contre l'API reelle** sur `claude-sonnet-5` : appel abouti, reponse parsee, erreurs traduites vers la taxonomie | `scripts_valider_fournisseur.py anthropic`, qui instancie l'adaptateur avec son modele par defaut `claude-sonnet-5` |
+| **L'adaptateur Anthropic fonctionne contre l'API reelle** sur `claude-sonnet-5` : appel abouti, reponse parsee, erreurs traduites vers la taxonomie | `scripts_valider_fournisseur.py anthropic`, qui instanciait alors l'adaptateur avec `claude-sonnet-5`, son defaut d'alors ; `FournisseurAnthropic` exige desormais `modele` en argument, sans defaut propre, et le script passe le modele des `Reglages` |
 | **La boucle de reparation repare contre un vrai modele** : face a une `meta_description` hors bornes, l'erreur nommant le champ est renvoyee au modele et le second jet est conforme | execution avec `generer_valide(max_essais=3)` |
 | **L'adaptateur OVHcloud fonctionne contre l'API reelle** : `Meta-Llama-3_3-70B-Instruct` a repondu, 65 tokens entree / 546 sortie, Page valide au premier essai grace a `response_format` | `scripts_valider_fournisseur.py ovhcloud` avec une vraie cle |
 | **Le graphe complet tourne contre un vrai modele** : violation bloquante detectee, correction reinjectee, second jet conforme, interruption pour validation, publication unique apres approbation | execution du graphe avec `FournisseurAnthropic` |
@@ -64,6 +69,8 @@ openai 3.14.0 · fastapi 0.141.1 · psycopg 3.3.5
 | Les six contraintes de déterminisme Temporal, mot pour mot | [docs.temporal.io — workflow basics](https://docs.temporal.io/develop/python/workflows/basics) |
 | Le serveur Temporal est sous licence MIT : l'auto-hébergement est libre, c'est Temporal Cloud qui est payant | [github.com/temporalio/temporal](https://github.com/temporalio/temporal) |
 | Langfuse est MIT (hors `ee/`) et auto-hébergeable, au prix de quatre services : Postgres, ClickHouse, Redis, S3 | [langfuse.com/self-hosting](https://langfuse.com/self-hosting), voir [`langfuse.md`](langfuse.md) |
+| « When you declare a path operation function with normal `def` instead of `async def`, it is run in an external threadpool that is then awaited, instead of being called directly (as it would block the server). » | [fastapi.tiangolo.com/async](https://fastapi.tiangolo.com/async/) — « Very Technical Details » |
+| « The `SkipJsonSchema` annotation can be used to skip an included field (or part of a field's specifications) from the generated JSON schema. » | [docs/concepts/json_schema.md#skipjsonschema-annotation](https://github.com/pydantic/pydantic/blob/main/docs/concepts/json_schema.md), pydantic 2.13.5 installe |
 
 ## Position d'auteur, à présenter comme telle
 

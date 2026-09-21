@@ -37,3 +37,15 @@ def test_le_noeud_de_controle_trace_les_violations(monkeypatch) -> None:
 
     assert vues, "aucune violation tracee alors que le fake produit des liens morts"
     assert all(isinstance(code, str) for code in vues)
+
+
+def test_observation_accepte_un_nom_de_trace_explicite(spans) -> None:
+    from langfuse._client.attributes import LangfuseOtelSpanAttributes
+
+    with observabilite.observation("x", fil="f", trace="tuteur"):
+        pass
+
+    (trace,) = [
+        s for s in spans() if s.attributes.get(LangfuseOtelSpanAttributes.TRACE_NAME) == "tuteur"
+    ]
+    assert trace.attributes[LangfuseOtelSpanAttributes.TRACE_NAME] == "tuteur"
