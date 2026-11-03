@@ -6,5 +6,18 @@
         "temporal.download"
       ]
     }
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -e .stop_hook_active >/dev/null && exit 0; cd \"$CLAUDE_PROJECT_DIR\" && { .venv/bin/ruff check . && .venv/bin/ruff format --check .; } 1>&2 || exit 2",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
   }
 }
